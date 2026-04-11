@@ -43,7 +43,6 @@ func main() {
 
 		ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood)
 
-		time.Sleep(500 * time.Millisecond)
-		
+		time.Sleep(1 * time.Second)
 	}
 }
