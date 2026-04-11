@@ -1,18 +1,22 @@
 package brain
 
 import (
+	"encoding/json"
 	"fmt"
 	"gopher-gotchi/internal/ui"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 type Pet struct {
-	Name 				string
-	Level				int
-	Experience	int
-	Hunger			int // 0 is full, 100 is starving
-	Mood				string
-	LastEaten		time.Time
+	Name 				string		`json:"name"`
+	Level				int				`json:"level"`
+	Experience	int				`json:"experience"`
+	Hunger			int 			`json:"hunger"` // 0 is full, 100 is starving 
+	Mood				string		`json:"mood"`
+	LastEaten		time.Time	`json:"last_eaten"`
+	Messages		[]string	`json:"-"` // No need to save the log to JSON
 }
 
 func NewPet(name string) *Pet {
@@ -21,7 +25,15 @@ func NewPet(name string) *Pet {
 		Level:			1,
 		Hunger:			0,
 		Mood:				"Happy",
-		LastEaten: 	time.Now(), 
+		LastEaten: 	time.Now(),
+		Messages:  []string{"🐣 I'm alive!"},
+	}
+}
+
+func (p *Pet) Log(msg string) {
+	p.Messages = append(p.Messages, msg)
+	if len(p.Messages) > 5 {
+		p.Messages = p.Messages[1:]
 	}
 }
 
@@ -38,7 +50,7 @@ func (p *Pet) Eat(linesChanged int) {
 	p.Experience += linesChanged
 	p.checkLevelUp()
 
-	fmt.Printf("😋 %s ate %d lines of code! (Exp: %d)\n", p.Name, linesChanged, p.Experience)
+	p.Log(fmt.Sprintf("😋 %s ate %d lines of code! (Exp: %d)\n", p.Name, linesChanged, p.Experience))
 }
 
 func (p *Pet) checkLevelUp() {
@@ -46,7 +58,7 @@ func (p *Pet) checkLevelUp() {
 	if p.Experience >= target {
 		p.Level++
 		p.Experience = 0
-		fmt.Printf("✨ LEVEL UP! %s is now Level %d!\n", p.Name, p.Level)
+		p.Log(fmt.Sprintf("✨ LEVEL UP! %s is now Level %d!\n", p.Name, p.Level))
 	}
 }
 
@@ -54,7 +66,7 @@ func (p *Pet) checkLevelUp() {
 func (p *Pet) LifeCycle() {
 	ticker := time.NewTicker(15 * time.Minute)
 	for range ticker.C {
-		p.Hunger += 5
+		p.Hunger += 10
 		if p.Hunger > 100 {
 			p.Hunger = 100
 			p.Mood = "Starving 💀"
@@ -78,4 +90,30 @@ func (p *Pet) GetFace() string {
 	}
 
 	return ui.FaceNeutral
+}
+
+// PERSISTENCE LOGIC
+
+func GetConfigPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".gopher-gotchi.json")
+}
+
+func (p *Pet) Save() error {
+	data, err := json.MarshalIndent(p, "", " ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(GetConfigPath(), data, 0644)
+}
+
+func LoadPet() (*Pet, error) {
+	data, err := os.ReadFile(GetConfigPath())
+	if err != nil {
+		return nil, err
+	}
+	var p Pet
+	err = json.Unmarshal(data, &p)
+	return &p, err
 }

@@ -23,7 +23,6 @@ func NewWatcher() *Watcher {
 
 func (w *Watcher) Start(rootPath string, onSave func(lines int)) {
 	// 1. Recursively add all subdirectories to the watcher
-
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
