@@ -4,9 +4,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/fsnotify/fsnotify"
 )
+
+var folderToRegister = []string{
+	"bionic",
+	"gopher-gotchi",
+}
 
 type Watcher struct {
 	fsWatcher *fsnotify.Watcher
@@ -27,9 +33,10 @@ func (w *Watcher) Start(rootPath string, onSave func(lines int)) {
 		if err != nil {
 			return err
 		}
+
 		if info.IsDir() {
 			// Skip hidden folders like .git or .node_modules to save CPU
-			if info.Name()[0] == '.' || info.Name() == "node_modules" {
+			if info.Name()[0] == '.' || info.Name() == "node_modules" || !slices.Contains(folderToRegister, info.Name()) {
 				return filepath.SkipDir
 			}
 			return w.fsWatcher.Add(path)
