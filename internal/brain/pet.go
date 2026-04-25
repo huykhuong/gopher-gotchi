@@ -11,6 +11,7 @@ import (
 
 type Pet struct {
 	Name 				string		`json:"name"`
+	Species			string		`json:"species"`
 	Level				int				`json:"level"`
 	Experience	int				`json:"experience"`
 	Hunger			int 			`json:"hunger"` // 0 is full, 100 is starving 
@@ -19,15 +20,24 @@ type Pet struct {
 	Messages		[]string	`json:"-"` // No need to save the log to JSON
 }
 
-func NewPet(name string) *Pet {
+func NewPet(name string, species string) *Pet {
+	if _, ok := ui.Themes[species]; !ok {
+		species = "gopher" // default to gopher if the theme is not found
+	}
+
 	return &Pet{
 		Name:				name,
+		Species:		species,
 		Level:			1,
 		Hunger:			0,
 		Mood:				"Happy",
 		LastEaten: 	time.Now(),
 		Messages:  []string{"🐣 I'm alive!"},
 	}
+}
+
+func (p *Pet) GetBlinkFace() string {
+	return ui.Themes[p.Species].Blink
 }
 
 func (p *Pet) Log(msg string) {
@@ -79,17 +89,19 @@ func (p *Pet) LifeCycle() {
 }
 
 func (p *Pet) GetFace() string {
+	theme := ui.Themes[p.Species]
+
 	if p.Hunger >= 100 {
-		return ui.FaceDead
+		return theme.Dead
 	}
 	if p.Hunger > 70 {
-		return ui.FaceHungry
+		return theme.Hungry
 	}
 	if p.Mood == "Happy" {
-		return ui.FaceHappy
+		return theme.Happy
 	}
 
-	return ui.FaceNeutral
+	return theme.Neutral
 }
 
 // PERSISTENCE LOGIC

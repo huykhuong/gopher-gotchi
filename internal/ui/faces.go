@@ -6,14 +6,37 @@ import (
 	"github.com/fatih/color"
 )
 
-const (
-	FaceHappy   = `  ( ^ ▽ ^ ) `
-	FaceNeutral = `  ( ・ ▽ ・ ) `
-	FaceBlink   = `  ( - ▽ - ) `
-	FaceHungry  = `  ( º﹃ º ) `
-	FaceLevelUp = `  ( ✧ ▽ ✧ ) `
-	FaceDead    = `  ( x _ x ) `
-)
+type Theme struct {
+	Happy string
+	Neutral string
+	Blink string
+	Hungry string
+	Dead string
+}
+
+var Themes = map[string]Theme{
+	"gopher": {
+		Happy:   `  ( ^ ▽ ^ ) `,
+		Neutral: `  ( ・ ▽ ・ ) `,
+		Blink:   `  ( - ▽ - ) `,
+		Hungry:  `  ( º﹃ º ) `,
+		Dead:    `  ( x _ x ) `,
+	},
+	"robot": {
+		Happy:   `  [ ^ _ ^ ] `,
+		Neutral: `  [ o _ o ] `,
+		Blink:   `  [ - _ - ] `,
+		Hungry:  `  [ ﹃ _ ﹃ ] `,
+		Dead:    `  [ # _ # ] `,
+	},
+	"cat": {
+		Happy:   ` (= ^ ⩊ ^ =) `,
+		Neutral: ` (= ・ ⩊ ・ =) `,
+		Blink:   ` (= - ⩊ - =) `,
+		Hungry:  ` (= º ⩊ º =) `,
+		Dead:    ` (= x ⩊ x =) `,
+	},
+}
 
 func DrawPet(face string, level int, hunger int, mood string, messages[]string) {
 	cyan := color.New(color.FgCyan).SprintFunc()

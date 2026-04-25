@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"gopher-gotchi/internal/brain"
 	"gopher-gotchi/internal/tray"
 	"gopher-gotchi/internal/ui"
@@ -12,12 +13,15 @@ import (
 )
 
 func main() {
+	speciesFlag := flag.String("species", "gopher", "The species of the pet")
+	flag.Parse()
+
 	// Seed the random number generator so the blinks aren't predictable
 	rand.Seed(time.Now().UnixNano())
 
 	myPet, err := brain.LoadPet()
 	if err != nil {
-		myPet = brain.NewPet("Gopher")
+		myPet = brain.NewPet("Gopher", *speciesFlag)
 	}
 
 	home, _ := os.UserHomeDir()
@@ -36,8 +40,8 @@ func main() {
 
 		for {
 			face := myPet.GetFace()
-			if (face == ui.FaceHappy || face == ui.FaceNeutral) && rand.Intn(5) == 0 {
-				face = ui.FaceBlink
+			if (face == ui.Themes[myPet.Species].Happy || face == ui.Themes[myPet.Species].Neutral) && rand.Intn(5) == 0 {
+				face = myPet.GetBlinkFace()
 			}
 
 			ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages)
