@@ -29,7 +29,7 @@ func main() {
 	w := watcher.NewWatcher()
 
 	w.Start(devPath, func(lines int) {
-		myPet.Eat(lines)
+		myPet.Eat(150)
 		myPet.Save()
 	})
 

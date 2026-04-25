@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/gen2brain/beeep"
 )
 
 type Pet struct {
@@ -68,7 +70,16 @@ func (p *Pet) checkLevelUp() {
 	if p.Experience >= target {
 		p.Level++
 		p.Experience = 0
-		p.Log(fmt.Sprintf("✨ LEVEL UP! %s is now Level %d!\n", p.Name, p.Level))
+
+		// Internal log
+		msg := fmt.Sprintf("✨ LEVEL UP! %s is now Level %d!\n", p.Name, p.Level) 
+		p.Log(msg)
+
+		// Desktop notification
+		err := beeep.Alert("Gopher-Gotchi Evolution", msg, "")
+		if err != nil {
+			p.Log(fmt.Sprintf("❌ Failed to send desktop notification: %v\n", err))
+		}
 	}
 }
 
