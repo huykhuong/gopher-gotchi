@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var sizeCache = make(map[string]int64)
+
 func main() {
 	speciesFlag := flag.String("species", "gopher", "The species of the pet")
 	flag.Parse()
@@ -26,11 +28,28 @@ func main() {
 
 	home, _ := os.UserHomeDir()
 	devPath := filepath.Join(home, "Development")
+
 	w := watcher.NewWatcher()
 
-	w.Start(devPath, func(lines int) {
-		myPet.Eat(20)
-		myPet.Save()
+	w.Start(devPath, func(path string) {
+		info, err := os.Stat(path)
+		if err != nil {
+			return
+		}
+
+		currentSize := info.Size()
+		lastSize := sizeCache[path]
+		
+		difference := currentSize - lastSize
+		if difference > 0 {
+			xpGained := int(difference / 10)
+			if xpGained > 0 {
+				myPet.Eat(xpGained)
+				myPet.Save()
+			}
+
+			sizeCache[path] = currentSize
+		}
 	})
 
 	// Launch logic & UI in a Goroutine

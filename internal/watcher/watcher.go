@@ -26,7 +26,7 @@ func NewWatcher() *Watcher {
 	return &Watcher{fsWatcher: w}
 }
 
-func (w *Watcher) Start(rootPath string, onSave func(lines int)) {
+func (w *Watcher) Start(rootPath string, onSave func(fileName string)) {
 	if err := w.registerDirs(rootPath); err != nil {
 		log.Fatal("Search error:", err)
 	}
@@ -45,7 +45,7 @@ func (w *Watcher) Start(rootPath string, onSave func(lines int)) {
 				}
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					onSave(20)
+					onSave(event.Name)
 				}
 			case err, ok := <-w.fsWatcher.Errors:
 				if !ok {

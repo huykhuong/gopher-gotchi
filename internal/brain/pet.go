@@ -50,23 +50,23 @@ func (p *Pet) Log(msg string) {
 	}
 }
 
-func (p *Pet) Eat(linesChanged int) {
-	if linesChanged <= 0 {
+func (p *Pet) Eat(exp int) {
+	if exp <= 0 {
 		return
 	}
 
 	p.LastEaten = time.Now()
 	p.IdleNudged = false
 
-	p.Hunger -= (linesChanged / 10)
+	p.Hunger -= (exp / 10)
 	if p.Hunger < 0 {
 		p.Hunger = 0
 	}
 
-	p.Experience += linesChanged
+	p.Experience += exp
 	p.checkLevelUp()
 
-	p.Log(fmt.Sprintf("😋 Ate %d lines of code!", linesChanged))
+	p.Log(fmt.Sprintf("😋 Gained %d experience points!", exp))
 }
 
 func (p *Pet) CheckIdle() {
