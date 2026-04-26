@@ -19,6 +19,7 @@ type Pet struct {
 	Hunger			int 			`json:"hunger"` // 0 is full, 100 is starving 
 	Mood				string		`json:"mood"`
 	LastEaten		time.Time	`json:"last_eaten"`
+	IdleNudged	bool			`json:"-"`
 	Messages		[]string	`json:"-"` // No need to save the log to JSON
 }
 
@@ -54,6 +55,9 @@ func (p *Pet) Eat(linesChanged int) {
 		return
 	}
 
+	p.LastEaten = time.Now()
+	p.IdleNudged = false
+
 	p.Hunger -= (linesChanged / 10)
 	if p.Hunger < 0 {
 		p.Hunger = 0
@@ -62,7 +66,18 @@ func (p *Pet) Eat(linesChanged int) {
 	p.Experience += linesChanged
 	p.checkLevelUp()
 
-	p.Log(fmt.Sprintf("😋 %s ate %d lines of code! (Exp: %d)\n", p.Name, linesChanged, p.Experience))
+	p.Log(fmt.Sprintf("😋 Ate %d lines of code!", linesChanged))
+}
+
+func (p *Pet) CheckIdle() {
+	if time.Since(p.LastEaten) > 10*time.Minute && !p.IdleNudged {
+		p.Mood = "Lonely 💔"
+		p.IdleNudged = true
+
+		msg := fmt.Sprintf("%s is feeling ignored... time to write some code?", p.Name)
+		beeep.Notify("Gopher-Gotchi", msg, "")
+		p.Log("📢 Sent a nudge for attention")
+	}
 }
 
 func (p *Pet) checkLevelUp() {
@@ -88,11 +103,17 @@ func (p *Pet) LifeCycle() {
 	ticker := time.NewTicker(15 * time.Minute)
 	for range ticker.C {
 		p.Hunger += 10
+
+		// Check if we should nudge the user.
+		p.CheckIdle()
+
 		if p.Hunger > 100 {
 			p.Hunger = 100
 			p.Mood = "Starving 💀"
 		} else if p.Hunger > 70 {
 			p.Mood = "Grumpy 💢"
+		} else if p.IdleNudged {
+			p.Mood = "Lonely 💔"
 		} else {
 			p.Mood = "Happy 😊"
 		}
