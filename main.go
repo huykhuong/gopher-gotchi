@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"gopher-gotchi/internal/brain"
 	"gopher-gotchi/internal/tray"
 	"gopher-gotchi/internal/ui"
@@ -13,7 +14,7 @@ import (
 )
 
 func main() {
-	speciesFlag := flag.String("species", "gopher", "The species of the pet")
+	speciesFlag := flag.String("species", "diana", "The species of the companion")
 	flag.Parse()
 
 	// Seed the random number generator so the blinks aren't predictable
@@ -21,7 +22,7 @@ func main() {
 
 	myPet, err := brain.LoadPet()
 	if err != nil {
-		myPet = brain.NewPet("Gopher", *speciesFlag)
+		myPet = brain.NewPet("Diana", *speciesFlag)
 	}
 
 	home, _ := os.UserHomeDir()
@@ -31,22 +32,34 @@ func main() {
 
 	w.Start(devPath, myPet)
 
+	uiTicker := time.NewTicker(2 * time.Second)
+	quoteTicker := time.NewTicker(2 * time.Minute)
+	defer uiTicker.Stop()
+	defer quoteTicker.Stop()
+
 	// Launch logic & UI in a Goroutine
 	// Because the Tray needs the main thread
 	go func() {
 		go myPet.LifeCycle()
 
+		fmt.Println("test")
+
 		for {
-			face := myPet.GetFace()
-			if (face == ui.Themes[myPet.Species].Happy || face == ui.Themes[myPet.Species].Neutral) && rand.Intn(5) == 0 {
-				face = myPet.GetBlinkFace()
+			select {
+			case <- uiTicker.C:
+				myPet.UpdateVitals()
+				face := myPet.GetFace()
+				if (face == ui.Themes[myPet.Species].Happy || face == ui.Themes[myPet.Species].Neutral) && rand.Intn(5) == 0 {
+					myPet.Log(myPet.GetRandomQuote())
+					face = myPet.GetBlinkFace()
+				}
+
+				ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages, myPet.CPULoad)
+
+				tray.Update(myPet.Level, myPet.Hunger, myPet.Mood)
+			case <- quoteTicker.C:
+				myPet.Log(myPet.GetRandomQuote())
 			}
-
-			ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages)
-
-			tray.Update(myPet.Level, myPet.Hunger, myPet.Mood)
-
-			time.Sleep(1 * time.Second)
 		}
 	}()
 

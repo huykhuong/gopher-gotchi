@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopher-gotchi/internal/ui"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/gen2brain/beeep"
+	"github.com/shirou/gopsutil/cpu"
 )
 
 type Pet struct {
@@ -21,22 +23,46 @@ type Pet struct {
 	LastEaten		time.Time	`json:"last_eaten"`
 	IdleNudged	bool			`json:"-"`
 	Messages		[]string	`json:"-"` // No need to save the log to JSON
+	CPULoad			int				`json:"-"`
+	BatteryLevel int			`json:"-"`
+	IsCharging	bool			`json:"-"`
+}
+
+// Random dialogue for Diana
+var dianaQuotes = []string{
+	"System check complete. Everything is nominal, Huy.",
+	"I'm scanning the data streams. You're doing great.",
+	"Your logic patterns are fascinating.",
+	"Are we pushing the boundaries today?",
+	"I'm glad to be synced with this unit.",
+	"You're making progress, Huy. Keep it up!",
+	"The system is stable. Ready for more tasks.",
+	"I'm here to support you. Anything specific?",
+	"You're on the right track. Keep coding!",
+	"I'm monitoring the system. Everything is under control.",
+	"You're making great strides. Keep pushing!",
 }
 
 func NewPet(name string, species string) *Pet {
 	if _, ok := ui.Themes[species]; !ok {
-		species = "gopher" // default to gopher if the theme is not found
+		species = "diana" // default to diana if the theme is not found
 	}
 
-	return &Pet{
+	p := &Pet{
 		Name:				name,
 		Species:		species,
 		Level:			1,
 		Hunger:			0,
 		Mood:				"Happy",
 		LastEaten: 	time.Now(),
-		Messages:  []string{"🐣 I'm alive!"},
+		Messages:  []string{"📡 Connection established. Hello, Huy."},
 	}
+
+	return p
+}
+
+func (p *Pet) GetRandomQuote() string {
+	return dianaQuotes[rand.Intn(len(dianaQuotes))]
 }
 
 func (p *Pet) GetBlinkFace() string {
@@ -74,8 +100,8 @@ func (p *Pet) CheckIdle() {
 		p.Mood = "Lonely 💔"
 		p.IdleNudged = true
 
-		msg := fmt.Sprintf("%s is feeling ignored... time to write some code?", p.Name)
-		beeep.Notify("Gopher-Gotchi", msg, "")
+		msg := "Huy? The data stream is thinning. Are you still there?"
+		beeep.Notify("Pragmata Protocol", msg, "")
 		p.Log("📢 Sent a nudge for attention")
 	}
 }
@@ -134,6 +160,13 @@ func (p *Pet) GetFace() string {
 	}
 
 	return theme.Neutral
+}
+
+func (p *Pet) UpdateVitals() {
+	c, _ := cpu.Percent(0, false)
+	if len(c) > 0 {
+		p.CPULoad = int(c[0])
+	}
 }
 
 // PERSISTENCE LOGIC

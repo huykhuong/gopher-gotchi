@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -36,27 +37,39 @@ var Themes = map[string]Theme{
 		Hungry:  ` (= º ⩊ º =) `,
 		Dead:    ` (= x ⩊ x =) `,
 	},
+	"diana": {
+    Happy:   `  (  ˶^ ᴗ ^˶ ) `,
+    Neutral: `  (  ˶• ᴗ •˶ ) `,
+    Blink:   `  (  ˶- ᴗ -˶ ) `,
+    Hungry:  `  (  ˶ó ᴗ ò˶ ) `,
+    Dead:    `  (  ˶x ᴗ x˶ ) `,
+},
 }
 
-func DrawPet(face string, level int, hunger int, mood string, messages[]string) {
+func DrawPet(face string, level int, hunger int, mood string, messages []string, cpu int) {
 	cyan := color.New(color.FgCyan).SprintFunc()
-	yellow := color.New(color.FgYellow).SprintFunc()
-	bold := color.New(color.Bold).SprintFunc()
+	white := color.New(color.FgWhite, color.Bold).SprintFunc()
+	red := color.New(color.FgRed).SprintFunc()
 
-	fmt.Print("\033[H\033[2J") // Clear screen
-	fmt.Println("\n" + bold("--- GOPHER-GOTCHI ---"))
-	fmt.Println(face)
-	fmt.Println("---------------------")
-	fmt.Printf("Level:  %s\n", yellow(level))
-	fmt.Printf("Hunger: %d%%\n", hunger)
-	fmt.Printf("Mood:   %s\n", cyan(mood))
-	fmt.Println("---------------------")
-
-	fmt.Println(bold("\n[ Activity Log ]"))
-	if len(messages) == 0 {
-		fmt.Println("No recent activity...")
+	fmt.Print("\033[H\033[2J")
+	
+	fmt.Println(cyan("⚡ [ PRAGMATA PROTOCOL: DIANA ] ⚡"))
+	
+	// CPU Pulse Meter
+	cpuBar := strings.Repeat("█", cpu/10) + strings.Repeat("░", 10-(cpu/10))
+	if cpu > 80 {
+			cpuBar = red(cpuBar)
 	}
+
+	fmt.Printf("%s   %s [CPU: %d%%]\n", white(face), cyan("PULSE:"), cpu)
+	fmt.Printf("               %s\n", cpuBar)
+
+	fmt.Println(cyan("----------------------------------"))
+	fmt.Printf("Level: %s | Hunger: %d%% | Mood: %s\n", white(level), hunger, cyan(mood))
+	fmt.Println(cyan("----------------------------------"))
+
+	// Messages
 	for _, msg := range messages {
-		fmt.Printf("> %s\n", msg)
+			fmt.Printf(cyan(">> ") + white(msg) + "\n")
 	}
 }
