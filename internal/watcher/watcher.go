@@ -1,12 +1,18 @@
 package watcher
 
 import (
+	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 
+	"gopher-gotchi/internal/brain"
+
 	"github.com/fsnotify/fsnotify"
 )
+
+var sizeCache = make(map[string]int64)
 
 var folderToRegister = []string{
 	"bionic",
@@ -26,7 +32,11 @@ func NewWatcher() *Watcher {
 	return &Watcher{fsWatcher: w}
 }
 
-func (w *Watcher) Start(rootPath string, onSave func(fileName string)) {
+func test(){
+	fmt.Println("test")
+}
+
+func (w *Watcher) Start(rootPath string, myPet *brain.Pet) {
 	if err := w.registerDirs(rootPath); err != nil {
 		log.Fatal("Search error:", err)
 	}
@@ -40,12 +50,13 @@ func (w *Watcher) Start(rootPath string, onSave func(fileName string)) {
 				}
 
 				if event.Op&fsnotify.Create == fsnotify.Create {
-					// Pick up any newly created subdirectories.
-					_ = w.registerDirs(rootPath)
+					if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+						_ = w.registerDirs(event.Name)
+					}
 				}
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					onSave(event.Name)
+					updateXP(event.Name, myPet)
 				}
 			case err, ok := <-w.fsWatcher.Errors:
 				if !ok {
@@ -58,37 +69,72 @@ func (w *Watcher) Start(rootPath string, onSave func(fileName string)) {
 }
 
 func (w *Watcher) registerDirs(rootPath string) error {
-	return filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+	return filepath.WalkDir(rootPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !info.IsDir() {
-			return nil
-		}
-
-		if info.Name()[0] == '.' || info.Name() == "node_modules" {
+		name := d.Name()
+		if d.IsDir() && (name == "" || name[0] == '.' || name == "node_modules") {
 			return filepath.SkipDir
 		}
 
-		// Only watch dirs under a folder listed in folderToRegister.
-		for p := path; ; {
-			base := filepath.Base(p)
-			for _, name := range folderToRegister {
-				if base == name {
-					return w.fsWatcher.Add(path)
-				}
-			}
-			parent := filepath.Dir(p)
-			if parent == p {
-				break
-			}
-			p = parent
+		if !underRegisteredFolder(path) {
+			return nil
 		}
-		return nil
+
+		info, err := d.Info()
+		if err != nil {
+			return nil
+		}
+
+		if !d.IsDir() {
+			sizeCache[path] = info.Size()
+			return nil
+		}
+
+		return w.fsWatcher.Add(path)
 	})
+}
+
+func underRegisteredFolder(path string) bool {
+	for p := path; ; {
+		base := filepath.Base(p)
+		for _, name := range folderToRegister {
+			if base == name {
+				return true
+			}
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return false
+		}
+		p = parent
+	}
 }
 
 func (w *Watcher) Close() {
 	w.fsWatcher.Close()
+}
+
+func updateXP(path string, myPet *brain.Pet) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+
+	currentSize := info.Size()
+	lastSize, seen := sizeCache[path]
+	sizeCache[path] = currentSize
+
+	if !seen {
+		return
+	}
+
+	if diff := currentSize - lastSize; diff > 0 {
+		if xp := int(diff / 10); xp > 0 {
+			myPet.Eat(xp)
+			myPet.Save()
+		}
+	}
 }
