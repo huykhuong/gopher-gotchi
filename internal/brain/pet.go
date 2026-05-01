@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"gopher-gotchi/internal/ui"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/gen2brain/beeep"
@@ -15,6 +15,7 @@ import (
 )
 
 type Pet struct {
+	mu					sync.RWMutex
 	Name 				string		`json:"name"`
 	Species			string		`json:"species"`
 	Level				int				`json:"level"`
@@ -27,21 +28,6 @@ type Pet struct {
 	CPULoad			int				`json:"-"`
 	BatteryLevel int			`json:"-"`
 	IsCharging	bool			`json:"-"`
-}
-
-// Random dialogue for Diana
-var dianaQuotes = []string{
-	"System check complete. Everything is nominal, Huy.",
-	"I'm scanning the data streams. You're doing great.",
-	"Your logic patterns are fascinating.",
-	"Are we pushing the boundaries today?",
-	"I'm glad to be synced with this unit.",
-	"You're making progress, Huy. Keep it up!",
-	"The system is stable. Ready for more tasks.",
-	"I'm here to support you. Anything specific?",
-	"You're on the right track. Keep coding!",
-	"I'm monitoring the system. Everything is under control.",
-	"You're making great strides. Keep pushing!",
 }
 
 func NewPet(name string, species string) *Pet {
@@ -80,10 +66,6 @@ func (p *Pet) HandleCommand(cmd string) string {
 	}
 }
 
-func (p *Pet) GetRandomQuote() string {
-	return dianaQuotes[rand.Intn(len(dianaQuotes))]
-}
-
 func (p *Pet) GetBlinkFace() string {
 	return ui.Themes[p.Species].Blink
 }
@@ -96,6 +78,9 @@ func (p *Pet) Log(msg string) {
 }
 
 func (p *Pet) Eat(exp int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if exp <= 0 {
 		return
 	}
@@ -103,7 +88,7 @@ func (p *Pet) Eat(exp int) {
 	p.LastEaten = time.Now()
 	p.IdleNudged = false
 
-	p.Hunger -= (exp / 10)
+	p.Hunger -= (exp / 2)
 	if p.Hunger < 0 {
 		p.Hunger = 0
 	}
@@ -166,7 +151,19 @@ func (p *Pet) LifeCycle() {
 }
 
 func (p *Pet) GetFace() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	theme := ui.Themes[p.Species]
+	hour := time.Now().Hour()
+
+	if hour >= 22 || hour < 5 {
+		return `  (  ˶- ᴗ -˶ ) zZ`
+	}
+
+	if hour >= 5 && hour < 9 {
+		return `  (  ˶O ᴗ O˶ ) ~`
+	}
 
 	if p.Hunger >= 100 {
 		return theme.Dead

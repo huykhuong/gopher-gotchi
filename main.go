@@ -14,6 +14,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/gen2brain/beeep"
 )
 
 func main() {
@@ -75,9 +77,7 @@ func runLoop(myPet *brain.Pet) {
 	go myPet.LifeCycle()
 
 	uiTicker := time.NewTicker(2 * time.Second)
-	// quoteTicker := time.NewTicker(2 * time.Minute)
 	defer uiTicker.Stop()
-	// defer quoteTicker.Stop()
 
 	for range uiTicker.C {
 		myPet.UpdateVitals()
@@ -87,5 +87,11 @@ func runLoop(myPet *brain.Pet) {
 		}
 		ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages, myPet.CPULoad)
 		tray.Update(myPet.Level, myPet.Hunger, myPet.Mood)
+
+		hour := time.Now().Hour()
+		if hour >= 23 {
+			// Desktop notification
+			beeep.Alert("Go easy on yourself 🌙", "Huy, it's late. Don't forget to rest.", "")
+		}
 	}
 }
