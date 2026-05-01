@@ -61,6 +61,15 @@ func NewPet(name string, species string) *Pet {
 	return p
 }
 
+func (p *Pet) HandleCommand(cmd string) string {
+	switch cmd {
+	case "ping":
+		return "PONG"
+	default:
+		return "Unknown command"
+	}
+}
+
 func (p *Pet) GetRandomQuote() string {
 	return dianaQuotes[rand.Intn(len(dianaQuotes))]
 }
