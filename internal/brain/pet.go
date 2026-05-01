@@ -1,10 +1,11 @@
 package brain
 
 import (
-	"encoding/json"
 	"fmt"
 	"gopher-gotchi/internal/ui"
+	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -59,6 +60,24 @@ func NewPet(name string, species string) *Pet {
 	}
 
 	return p
+}
+
+func (p *Pet) HandleCommand(cmd string) string {
+	switch cmd {
+	case "ping":
+		return "PONG"
+	case "hug":
+		p.Mood = "Happy 😊"
+		p.Log("💖 Huy sent a virtual hug.")
+		return "˶^ ᴗ ^˶ I feel the sync. Thank you, Huy."
+	case "joke":
+		p.Log("🔍 Diana is scanning terrestrial archives...")
+		joke := fetchArchiveData()
+
+		return fmt.Sprintf("I found this entry in the historical archives, Huy:\n\n%s", joke)
+	default:
+		return "Unknown command"
+	}
 }
 
 func (p *Pet) GetRandomQuote() string {
@@ -128,7 +147,7 @@ func (p *Pet) checkLevelUp() {
 func (p *Pet) LifeCycle() {
 	ticker := time.NewTicker(15 * time.Minute)
 	for range ticker.C {
-		p.Hunger += 10
+		p.Hunger += 5
 
 		// Check if we should nudge the user.
 		p.CheckIdle()
@@ -176,21 +195,35 @@ func GetConfigPath() string {
 	return filepath.Join(home, ".gopher-gotchi.json")
 }
 
-func (p *Pet) Save() error {
-	data, err := json.MarshalIndent(p, "", " ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(GetConfigPath(), data, 0644)
+func (p *Pet) Save() {
+	go func() {
+		err := SaveToCloud(p)
+		if err != nil {
+			p.Log("⚠️ Cloud Sync failed. Check connection.")
+		} else {
+		}
+	}()
 }
 
 func LoadPet() (*Pet, error) {
-	data, err := os.ReadFile(GetConfigPath())
-	if err != nil {
-		return nil, err
+	fmt.Println("🌐 Connecting to Pragmata Cloud...")
+	return LoadFromCloud()
+}
+
+func fetchArchiveData() string {
+	client := http.Client{
+		Timeout: 3 * time.Second,
 	}
-	var p Pet
-	err = json.Unmarshal(data, &p)
-	return &p, err
+
+	req, _ := http.NewRequest("GET", "https://icanhazdadjoke.com/", nil)
+	req.Header.Set("Accept", "text/plain")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "Sorry! I can't connect to the archive."
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	return string(body)
 }
