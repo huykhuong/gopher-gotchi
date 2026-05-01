@@ -1,0 +1,9 @@
+# Ignore the binary
+gopher-gotchi
+
+# Ignore local state files
+*.json
+.DS_Store
+
+# Ignore environment files if you use them
+.env

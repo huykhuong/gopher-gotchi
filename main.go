@@ -20,8 +20,6 @@ func main() {
 	speciesFlag := flag.String("species", "diana", "The species of the companion")
 	flag.Parse()
 
-	rand.Seed(time.Now().UnixNano())
-
 	if handleCLICommands() {
 		return
 	}
@@ -53,6 +51,7 @@ func handleCLICommands() bool {
 		fmt.Printf("📡 Diana responds: %s\n", string(body))
 		return true
 	}
+	
 	return false
 }
 
@@ -76,23 +75,17 @@ func runLoop(myPet *brain.Pet) {
 	go myPet.LifeCycle()
 
 	uiTicker := time.NewTicker(2 * time.Second)
-	quoteTicker := time.NewTicker(2 * time.Minute)
+	// quoteTicker := time.NewTicker(2 * time.Minute)
 	defer uiTicker.Stop()
-	defer quoteTicker.Stop()
+	// defer quoteTicker.Stop()
 
-	for {
-		select {
-		case <-uiTicker.C:
-			myPet.UpdateVitals()
-			face := myPet.GetFace()
-			if (face == ui.Themes[myPet.Species].Happy || face == ui.Themes[myPet.Species].Neutral) && rand.Intn(5) == 0 {
-				myPet.Log(myPet.GetRandomQuote())
-				face = myPet.GetBlinkFace()
-			}
-			ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages, myPet.CPULoad)
-			tray.Update(myPet.Level, myPet.Hunger, myPet.Mood)
-		case <-quoteTicker.C:
-			myPet.Log(myPet.GetRandomQuote())
+	for range uiTicker.C {
+		myPet.UpdateVitals()
+		face := myPet.GetFace()
+		if (face == ui.Themes[myPet.Species].Happy || face == ui.Themes[myPet.Species].Neutral) && rand.Intn(5) == 0 {
+			face = myPet.GetBlinkFace()
 		}
+		ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages, myPet.CPULoad)
+		tray.Update(myPet.Level, myPet.Hunger, myPet.Mood)
 	}
 }
