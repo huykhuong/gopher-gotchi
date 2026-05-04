@@ -12,13 +12,20 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gen2brain/beeep"
 )
 
 func main() {
+	var wg sync.WaitGroup
+	stopSignal := make(chan os.Signal, 1)
+	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
+
 	speciesFlag := flag.String("species", "diana", "The species of the companion")
 	flag.Parse()
 
@@ -28,14 +35,32 @@ func main() {
 
 	myPet := loadOrCreatePet(*speciesFlag)
 
-	w := startWatcher(myPet)
+	eventsChan := make(chan brain.DataEvent, 10)
+	tasks := make(chan brain.Task, 10)
 
+	w := startWatcher(eventsChan)
 	api.StartServer(myPet)
+	brain.StartWorkerPool(tasks)
 
+	go runEventLoop(eventsChan, tasks, myPet)
 	go runLoop(myPet)
 
+	<-stopSignal
+
 	tray.Init(func() {
-		myPet.Save()
+		close(eventsChan)
+
+		wg.Add(1)
+		tasks <- func() error {
+			defer wg.Done()
+			return brain.SaveToCloud(myPet)
+		}
+		wg.Wait()
+		close(tasks)
+
+		fmt.Println("💾 Finalizing cloud sync... Goodbye, Huy.")
+		time.Sleep(2 * time.Second)
+
 		w.Close()
 		os.Exit(0)
 	})
@@ -65,12 +90,26 @@ func loadOrCreatePet(species string) *brain.Pet {
 	return myPet
 }
 
-func startWatcher(myPet *brain.Pet) *watcher.Watcher {
+func startWatcher(eventChan chan<- brain.DataEvent) *watcher.Watcher {
 	home, _ := os.UserHomeDir()
 	devPath := filepath.Join(home, "Development")
 	w := watcher.NewWatcher()
-	w.Start(devPath, myPet)
+	w.Start(devPath, eventChan)
 	return w
+}
+
+func runEventLoop(eventsChan chan brain.DataEvent, tasks chan brain.Task, myPet *brain.Pet) {
+	for event := range eventsChan {
+		switch event.Type {
+		case brain.FileSaved:
+			path := event.Payload.(string)
+			watcher.UpdateXP(path, myPet)
+
+			tasks <- func() error {
+				return brain.SaveToCloud(myPet)
+			}
+		}
+	}
 }
 
 func runLoop(myPet *brain.Pet) {

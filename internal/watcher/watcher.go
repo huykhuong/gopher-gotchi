@@ -1,7 +1,6 @@
 package watcher
 
 import (
-	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -32,11 +31,7 @@ func NewWatcher() *Watcher {
 	return &Watcher{fsWatcher: w}
 }
 
-func test(){
-	fmt.Println("test")
-}
-
-func (w *Watcher) Start(rootPath string, myPet *brain.Pet) {
+func (w *Watcher) Start(rootPath string, eventChan chan<- brain.DataEvent) {
 	if err := w.registerDirs(rootPath); err != nil {
 		log.Fatal("Search error:", err)
 	}
@@ -56,7 +51,10 @@ func (w *Watcher) Start(rootPath string, myPet *brain.Pet) {
 				}
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					updateXP(event.Name, myPet)
+					eventChan <- brain.DataEvent{
+						Type: 		brain.FileSaved,
+						Payload: 	event.Name,
+					}
 				}
 			case err, ok := <-w.fsWatcher.Errors:
 				if !ok {
@@ -117,7 +115,7 @@ func (w *Watcher) Close() {
 	w.fsWatcher.Close()
 }
 
-func updateXP(path string, myPet *brain.Pet) {
+func UpdateXP(path string, myPet *brain.Pet) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return
@@ -134,7 +132,6 @@ func updateXP(path string, myPet *brain.Pet) {
 	if diff := currentSize - lastSize; diff > 0 {
 		if xp := int(diff / 10); xp > 0 {
 			myPet.Eat(xp)
-			myPet.Save()
 		}
 	}
 }

@@ -5,8 +5,6 @@ import (
 	"gopher-gotchi/internal/ui"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -86,6 +84,7 @@ func (p *Pet) Eat(exp int) {
 	}
 
 	p.LastEaten = time.Now()
+	p.Mood = "Happy 😊"
 	p.IdleNudged = false
 
 	p.Hunger -= (exp / 2)
@@ -186,22 +185,6 @@ func (p *Pet) UpdateVitals() {
 }
 
 // PERSISTENCE LOGIC
-
-func GetConfigPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".gopher-gotchi.json")
-}
-
-func (p *Pet) Save() {
-	go func() {
-		err := SaveToCloud(p)
-		if err != nil {
-			p.Log("⚠️ Cloud Sync failed. Check connection.")
-		} else {
-		}
-	}()
-}
-
 func LoadPet() (*Pet, error) {
 	fmt.Println("🌐 Connecting to Pragmata Cloud...")
 	return LoadFromCloud()
