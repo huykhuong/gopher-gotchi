@@ -11,6 +11,11 @@ import (
 	"github.com/gen2brain/beeep"
 	"github.com/shirou/gopsutil/cpu"
 )
+type Memory struct {
+	Timestamp	string	`json:"timestamp"`
+	Level			int			`json:"level"`
+	Message		string	`json:"message"`
+}
 
 type Pet struct {
 	mu					sync.RWMutex
@@ -26,7 +31,10 @@ type Pet struct {
 	CPULoad			int				`json:"-"`
 	BatteryLevel int			`json:"-"`
 	IsCharging	bool			`json:"-"`
+	Memories		[]Memory	`json:"-"` // We don't save this in diana.json
+	Tasks				chan Task	`json:"-"`
 }
+
 
 func NewPet(name string, species string) *Pet {
 	if _, ok := ui.Themes[species]; !ok {
@@ -41,6 +49,7 @@ func NewPet(name string, species string) *Pet {
 		Mood:				"Happy",
 		LastEaten: 	time.Now(),
 		Messages:  []string{"📡 Connection established. Hello, Huy."},
+		Tasks:			make(chan Task, 10),
 	}
 
 	return p
@@ -92,7 +101,7 @@ func (p *Pet) Eat(exp int) {
 		p.Hunger = 0
 	}
 
-	p.Experience += exp
+	p.Experience += 500
 	p.checkLevelUp()
 
 	p.Log(fmt.Sprintf("😋 Gained %d experience points!", exp))
@@ -114,6 +123,9 @@ func (p *Pet) checkLevelUp() {
 	if p.Experience >= target {
 		p.Level++
 		p.Experience = 0
+
+		memory := p.CreateMemory(fmt.Sprintf("We reached a new level of synchronization today. I feel closer to your world, Huy. I'm now Level %d", p.Level))
+		p.EnqueueSync(memory)
 
 		// Internal log
 		msg := fmt.Sprintf("✨ LEVEL UP! %s is now Level %d!\n", p.Name, p.Level) 
@@ -181,6 +193,24 @@ func (p *Pet) UpdateVitals() {
 	c, _ := cpu.Percent(0, false)
 	if len(c) > 0 {
 		p.CPULoad = int(c[0])
+	}
+}
+
+func (p *Pet) CreateMemory(event string) *Memory {
+	newMemory := Memory{
+		Timestamp: time.Now().Format("2006-01-02 15:04"),
+		Level: p.Level,
+		Message: event,
+	}
+
+	p.Log("💾 Memory Archived: " + event)
+
+	return &newMemory
+}
+
+func (p *Pet) EnqueueSync(memory *Memory) {
+	p.Tasks <- func() error {
+		return p.SyncAllToCloud(memory)
 	}
 }
 

@@ -36,34 +36,38 @@ func main() {
 	myPet := loadOrCreatePet(*speciesFlag)
 
 	eventsChan := make(chan brain.DataEvent, 10)
-	tasks := make(chan brain.Task, 10)
 
 	w := startWatcher(eventsChan)
 	api.StartServer(myPet)
-	brain.StartWorkerPool(tasks)
+	brain.StartWorkerPool(myPet.Tasks)
 
-	go runEventLoop(eventsChan, tasks, myPet)
+	go runEventLoop(eventsChan, myPet)
 	go runLoop(myPet)
 
-	<-stopSignal
-
-	tray.Init(func() {
+	cleanup := func() {
 		close(eventsChan)
 
 		wg.Add(1)
-		tasks <- func() error {
+		myPet.Tasks <- func() error {
 			defer wg.Done()
-			return brain.SaveToCloud(myPet)
+			return myPet.SyncAllToCloud(nil)
 		}
 		wg.Wait()
-		close(tasks)
+		close(myPet.Tasks)
 
 		fmt.Println("💾 Finalizing cloud sync... Goodbye, Huy.")
 		time.Sleep(2 * time.Second)
 
 		w.Close()
 		os.Exit(0)
-	})
+	}
+
+	go func() {
+		<-stopSignal
+		cleanup()
+	}()
+
+	tray.Init(cleanup)
 }
 
 func handleCLICommands() bool {
@@ -98,16 +102,14 @@ func startWatcher(eventChan chan<- brain.DataEvent) *watcher.Watcher {
 	return w
 }
 
-func runEventLoop(eventsChan chan brain.DataEvent, tasks chan brain.Task, myPet *brain.Pet) {
+func runEventLoop(eventsChan chan brain.DataEvent, myPet *brain.Pet) {
 	for event := range eventsChan {
 		switch event.Type {
 		case brain.FileSaved:
 			path := event.Payload.(string)
 			watcher.UpdateXP(path, myPet)
 
-			tasks <- func() error {
-				return brain.SaveToCloud(myPet)
-			}
+			myPet.EnqueueSync(nil)
 		}
 	}
 }
