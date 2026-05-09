@@ -15,8 +15,7 @@ func StartServer(p *brain.Pet) {
 			return
 		}
 
-		response := p.HandleCommand(cmd)
-		fmt.Fprint(w, response)
+		p.HandleCommand(cmd)
 	})
 
 	http.HandleFunc("/spritesheet", func(w http.ResponseWriter, r *http.Request) {

@@ -22,7 +22,7 @@ func Init(onQuit func()) {
 
 		mQuit := systray.AddMenuItem("Quit Gopher-Gotchi", "Stop the companion")
 
-		go func ()  {
+		go func() {
 			<-mQuit.ClickedCh
 			onQuit()
 			systray.Quit()

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 )
 
 type GistUpdate struct {
@@ -78,7 +79,7 @@ func (p *Pet) SyncAllToCloud(newMemory *Memory) error {
 	token, gistID, logGistID := getCloudCredentials()
 
 	if token == "" {
-		return fmt.Errorf("Missing cloud credentials")
+		return fmt.Errorf("missing cloud credentials")
 	}
 
 	data, _ := json.MarshalIndent(p, "", "  ")
@@ -128,4 +129,22 @@ func LoadFromCloud() (*Pet, error) {
 	err = json.Unmarshal([]byte(gistData.Files["diana.json"].Content), &p)
 	p.Tasks = make(chan Task, 10)
 	return &p, err
+}
+
+func FetchArchiveData() string {
+	client := http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	req, _ := http.NewRequest("GET", "https://icanhazdadjoke.com/", nil)
+	req.Header.Set("Accept", "text/plain")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "Sorry! I can't connect to the archive."
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	return string(body)
 }

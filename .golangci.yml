@@ -1,0 +1,72 @@
+version: 2
+
+linters-settings:
+  govet:
+    enable:
+      - assign           # Check for useless assignments
+      - atomic           # Check for common mistakes using atomic
+      - bools            # Check for common mistakes involving boolean operators
+      - composites       # Check for unkeyed composite literals
+      - copylocks        # Check for locks that are erroneously passed by value
+      - nilfunc          # Check for useless comparisons between functions and nil
+      - printf           # Check consistency of Printf format strings and arguments
+      - shadow           # Check for possible unintended shadowing of variables
+      - structtag        # Check that struct field tags conform to reflect.StructTag.Get
+      - tests            # Check for common mistaken usages of tests and examples
+      - unreachable      # Check for unreachable code
+    disable:
+      - unusedresult     # Don't check for unused error results
+  
+  gocyclo:
+    min-complexity: 20   # More relaxed complexity threshold
+  
+  whitespace:
+    multi-if: true
+    multi-func: true
+
+linters:
+  disable-all: true
+  disable:
+    - errcheck        # Don't enforce error checking
+  enable:
+    # Core quality checks
+    - govet           # Reports suspicious constructs and common mistakes
+    - ineffassign     # Detects ineffectual assignments
+    - staticcheck     # Comprehensive static analysis (includes unused vars, simplifications)
+    - unused          # Checks for unused constants, variables, functions and types
+    
+    # Code simplification and cleanup
+    - unconvert       # Removes unnecessary type conversions
+    - gocyclo         # Checks for overly complex functions
+    
+    # Formatting and style
+    - whitespace      # Detects unnecessary newlines
+    
+    # Common mistakes
+    - copyloopvar     # Detects loop variable issues
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  
+  exclude-rules:
+    # Relax for test files
+    - path: _test\.go
+      linters:
+        - gocyclo
+
+run:
+  timeout: 5m
+  tests: true
+  skip-dirs:
+    - vendor
+    - bin
+    - data
+
+output:
+  formats:
+    colored-line-number:
+      path: stdout
+  print-issued-lines: true
+  print-linter-name: true

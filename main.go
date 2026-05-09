@@ -7,7 +7,6 @@ import (
 	"gopher-gotchi/internal/brain"
 	"gopher-gotchi/internal/watcher"
 	"gopher-gotchi/internal/window"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,8 +14,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/gen2brain/beeep"
 )
 
 func main() {
@@ -25,6 +22,7 @@ func main() {
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 
 	speciesFlag := flag.String("species", "diana", "The species of the companion")
+	devFlag     := flag.Bool("dev", false, "Load UI from filesystem for live editing")
 	flag.Parse()
 
 	if handleCLICommands() {
@@ -59,7 +57,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	win = window.New(cleanup)
+	win = window.New(cleanup, *devFlag)
 
 	startWatcher(eventsChan)
 	api.StartServer(myPet)
@@ -81,13 +79,11 @@ func main() {
 func handleCLICommands() bool {
 	if len(os.Args) > 2 && os.Args[1] == "tell" {
 		command := os.Args[2]
-		resp, err := http.Get("http://localhost:9090/tell?cmd=" + command)
+		_, err := http.Get("http://localhost:9090/tell?cmd=" + command)
 		if err != nil {
 			fmt.Println("❌ Could not reach Diana. Maybe she's sleeping?")
 			return true
 		}
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("📡 Diana responds: %s\n", string(body))
 		return true
 	}
 
@@ -124,6 +120,7 @@ func runEventLoop(eventsChan chan brain.DataEvent, myPet *brain.Pet) {
 
 func runLoop(myPet *brain.Pet, win *window.Window) {
 	go myPet.LifeCycle()
+	go myPet.RunJokeLoop()
 
 	uiTicker := time.NewTicker(2 * time.Second)
 	defer uiTicker.Stop()
@@ -131,17 +128,23 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 	for range uiTicker.C {
 		myPet.UpdateVitals()
 
+		message := ""
+		if myPet.Message != "" {
+			message = myPet.Message
+			myPet.Message = ""
+		}
+
 		win.Update(window.PetState{
-			Level:    myPet.Level,
-			Hunger:   myPet.Hunger,
-			Mood:     myPet.Mood,
-			Messages: myPet.Messages,
-			CPULoad:  myPet.CPULoad,
+			Level:   myPet.Level,
+			Hunger:  myPet.Hunger,
+			Mood:    myPet.Mood,
+			Message: message,
+			CPULoad: myPet.CPULoad,
 		})
 
 		hour := time.Now().Hour()
 		if hour >= 23 {
-			beeep.Alert("Go easy on yourself 🌙", "Huy, it's late. Don't forget to rest.", "")
+			myPet.Log("Go easy on yourself 🌙, Huy. It's late. Don't forget to rest.")
 		}
 	}
 }

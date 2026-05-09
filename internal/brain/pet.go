@@ -3,37 +3,36 @@ package brain
 import (
 	"fmt"
 	"gopher-gotchi/internal/ui"
-	"io"
-	"net/http"
+	"math/rand/v2"
 	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
 )
+
 type Memory struct {
-	Timestamp	string	`json:"timestamp"`
-	Level			int			`json:"level"`
-	Message		string	`json:"message"`
+	Timestamp string `json:"timestamp"`
+	Level     int    `json:"level"`
+	Message   string `json:"message"`
 }
 
 type Pet struct {
-	mu					sync.RWMutex
-	Name 				string		`json:"name"`
-	Species			string		`json:"species"`
-	Level				int				`json:"level"`
-	Experience	int				`json:"experience"`
-	Hunger			int 			`json:"hunger"` // 0 is full, 100 is starving 
-	Mood				string		`json:"mood"`
-	LastEaten		time.Time	`json:"last_eaten"`
-	IdleNudged	bool			`json:"-"`
-	Messages		[]string	`json:"-"` // No need to save the log to JSON
-	CPULoad			int				`json:"-"`
-	BatteryLevel int			`json:"-"`
-	IsCharging	bool			`json:"-"`
-	Memories		[]Memory	`json:"-"` // We don't save this in diana.json
-	Tasks				chan Task	`json:"-"`
+	mu           sync.RWMutex
+	Name         string    `json:"name"`
+	Species      string    `json:"species"`
+	Level        int       `json:"level"`
+	Experience   int       `json:"experience"`
+	Hunger       int       `json:"hunger"` // 0 is full, 100 is starving
+	Mood         string    `json:"mood"`
+	LastEaten    time.Time `json:"last_eaten"`
+	IdleNudged   bool      `json:"-"`
+	Message      string  `json:"-"` // No need to save the log to JSON
+	CPULoad      int       `json:"-"`
+	BatteryLevel int       `json:"-"`
+	IsCharging   bool      `json:"-"`
+	Memories     []Memory  `json:"-"` // We don't save this in diana.json
+	Tasks        chan Task `json:"-"`
 }
-
 
 func NewPet(name string, species string) *Pet {
 	if _, ok := ui.Themes[species]; !ok {
@@ -41,33 +40,28 @@ func NewPet(name string, species string) *Pet {
 	}
 
 	p := &Pet{
-		Name:				name,
-		Species:		species,
-		Level:			1,
-		Hunger:			0,
-		Mood:				"Happy",
-		LastEaten: 	time.Now(),
-		Messages:  []string{"📡 Connection established. Hello, Huy."},
-		Tasks:			make(chan Task, 10),
+		Name:      name,
+		Species:   species,
+		Level:     1,
+		Hunger:    0,
+		Mood:      "Happy",
+		LastEaten: time.Now(),
+		Message:   "📡 Connection established. Hello, Huy.",
+		Tasks:     make(chan Task, 10),
 	}
 
 	return p
 }
 
-func (p *Pet) HandleCommand(cmd string) string {
+func (p *Pet) HandleCommand(cmd string) {
 	switch cmd {
 	case "ping":
-		return "PONG"
+		p.Log("PONG")
 	case "hug":
 		p.Mood = "Happy 😊"
-		p.Log("💖 Huy sent a virtual hug.")
-		return "˶^ ᴗ ^˶ I feel the sync. Thank you, Huy."
-	case "joke":
-		joke := fetchArchiveData()
-		p.Log(fmt.Sprintf("I found this entry in the historical archives, Huy:\n\n%s", joke))
-		return ""
+		p.Log("💖 ˶^ ᴗ ^˶ I feel the warmth. Thank you, Huy.")
 	default:
-		return "Unknown command"
+		p.Log("Unknown command")
 	}
 }
 
@@ -76,10 +70,7 @@ func (p *Pet) GetBlinkFace() string {
 }
 
 func (p *Pet) Log(msg string) {
-	p.Messages = append(p.Messages, msg)
-	if len(p.Messages) > 5 {
-		p.Messages = p.Messages[1:]
-	}
+	p.Message = msg
 }
 
 func (p *Pet) Eat(exp int) {
@@ -100,7 +91,7 @@ func (p *Pet) Eat(exp int) {
 	}
 
 	p.Experience += exp
-	
+
 	p.Log(fmt.Sprintf("😋 Gained %d experience points!", exp))
 	p.checkLevelUp()
 }
@@ -124,7 +115,7 @@ func (p *Pet) checkLevelUp() {
 		p.EnqueueSync(memory)
 
 		// Internal log
-		msg := fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level) 
+		msg := fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level)
 		p.Log(msg)
 	}
 }
@@ -161,8 +152,8 @@ func (p *Pet) UpdateVitals() {
 func (p *Pet) CreateMemory(event string) *Memory {
 	newMemory := Memory{
 		Timestamp: time.Now().Format("2006-01-02 15:04"),
-		Level: p.Level,
-		Message: event,
+		Level:     p.Level,
+		Message:   event,
 	}
 
 	p.Log("💾 Memory Archived: " + event)
@@ -176,26 +167,22 @@ func (p *Pet) EnqueueSync(memory *Memory) {
 	}
 }
 
+func (p *Pet) RunJokeLoop() {
+	for {
+		<-time.After(nextJokeDelay())
+		joke := FetchArchiveData()
+		p.Log(fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke))
+	}
+}
+
 // PERSISTENCE LOGIC
 func LoadPet() (*Pet, error) {
 	fmt.Println("🌐 Connecting to Pragmata Cloud...")
 	return LoadFromCloud()
 }
 
-func fetchArchiveData() string {
-	client := http.Client{
-		Timeout: 3 * time.Second,
-	}
-
-	req, _ := http.NewRequest("GET", "https://icanhazdadjoke.com/", nil)
-	req.Header.Set("Accept", "text/plain")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "Sorry! I can't connect to the archive."
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	return string(body)
+func nextJokeDelay() time.Duration {
+	const minD = 10 * time.Second
+	const maxD = 3 * time.Minute
+	return minD + time.Duration(rand.Int64N(int64(maxD-minD)))
 }

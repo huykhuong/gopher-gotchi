@@ -226,7 +226,7 @@
   document.addEventListener('mouseup', function() { dragging = false; });
 
   // State updates
-  let lastMsg = '', bubbleTimer = null;
+  let bubbleTimer = null;
 
   function updateState(s) {
     document.getElementById('level').textContent = 'LVL ' + (s.level || 1);
@@ -234,6 +234,7 @@
 
     const mood   = (s.mood || '').toLowerCase();
     const hunger = s.hunger || 0;
+    
     if      (hunger > 70)             setAnimation('failed');
     else if (mood.includes('happy'))  {
       var random = Math.floor(Math.random() * 3);
@@ -253,10 +254,7 @@
     document.getElementById('cpu-bar').style.width = c + '%';
     document.getElementById('cpu-val').textContent = c + '%';
 
-    if (s.messages && s.messages.length > 0) {
-      const latest = s.messages[s.messages.length - 1];
-      if (latest !== lastMsg) { lastMsg = latest; showBubble(latest); }
-    }
+    if (s.message) {showBubble(s.message)}
   }
 
   function showBubble(text) {

@@ -44,6 +44,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"unsafe"
 
@@ -67,14 +69,14 @@ type PetState struct {
 	Level    int      `json:"level"`
 	Hunger   int      `json:"hunger"`
 	Mood     string   `json:"mood"`
-	Messages []string `json:"messages"`
+	Message  string   `json:"message"`
 	CPULoad  int      `json:"cpuLoad"`
 }
 
 // Window wraps a webview window that displays the floating pet UI.
 type Window struct {
-	wv      webview.WebView
-	onQuit  func()
+	wv     webview.WebView
+	onQuit func()
 }
 
 // New creates a new floating pet window. onQuit is called when the user
@@ -82,17 +84,24 @@ type Window struct {
 //
 // Must be called from the main OS thread (runtime.LockOSThread is applied
 // automatically by the webview package's init()).
-func New(onQuit func()) *Window {
+func New(onQuit func(), dev bool) *Window {
 	runtime.LockOSThread()
 
 	w := &Window{
-		wv:     webview.New(false),
+		wv:     webview.New(dev),
 		onQuit: onQuit,
 	}
 
 	w.wv.SetTitle("Diana")
 	w.wv.SetSize(windowWidth, windowHeight, webview.HintFixed)
-	w.wv.SetHtml(indexHTML)
+
+	if dev {
+		cwd, _ := os.Getwd()
+		htmlPath := filepath.Join(cwd, "internal", "window", "index.html")
+		w.wv.Navigate("file://" + htmlPath)
+	} else {
+		w.wv.SetHtml(indexHTML)
+	}
 
 	// Position and style the native NSWindow after the webview is created.
 	w.wv.Dispatch(func() {

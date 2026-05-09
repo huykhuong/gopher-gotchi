@@ -52,8 +52,8 @@ func (w *Watcher) Start(rootPath string, eventChan chan<- brain.DataEvent) {
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					eventChan <- brain.DataEvent{
-						Type: 		brain.FileSaved,
-						Payload: 	event.Name,
+						Type:    brain.FileSaved,
+						Payload: event.Name,
 					}
 				}
 			case err, ok := <-w.fsWatcher.Errors:
