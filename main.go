@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"gopher-gotchi/internal/api"
 	"gopher-gotchi/internal/brain"
-	"gopher-gotchi/internal/tray"
-	"gopher-gotchi/internal/ui"
 	"gopher-gotchi/internal/watcher"
+	"gopher-gotchi/internal/window"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -37,14 +35,14 @@ func main() {
 
 	eventsChan := make(chan brain.DataEvent, 10)
 
-	w := startWatcher(eventsChan)
-	api.StartServer(myPet)
-	brain.StartWorkerPool(myPet.Tasks)
-
-	go runEventLoop(eventsChan, myPet)
-	go runLoop(myPet)
-
+	// Create the window first — before the file watcher opens thousands of
+	// file descriptors, which would exhaust macOS's limit and crash Metal init.
+	var win *window.Window
 	cleanup := func() {
+		if win != nil {
+			win.Terminate()
+		}
+
 		close(eventsChan)
 
 		wg.Add(1)
@@ -58,16 +56,26 @@ func main() {
 		fmt.Println("💾 Finalizing cloud sync... Goodbye, Huy.")
 		time.Sleep(2 * time.Second)
 
-		w.Close()
 		os.Exit(0)
 	}
+
+	win = window.New(cleanup)
+
+	startWatcher(eventsChan)
+	api.StartServer(myPet)
+	brain.StartWorkerPool(myPet.Tasks)
+
+	go runEventLoop(eventsChan, myPet)
+
+	go runLoop(myPet, win)
 
 	go func() {
 		<-stopSignal
 		cleanup()
 	}()
 
-	tray.Init(cleanup)
+	// Run blocks the main thread until the window is closed.
+	win.Run()
 }
 
 func handleCLICommands() bool {
@@ -82,7 +90,7 @@ func handleCLICommands() bool {
 		fmt.Printf("📡 Diana responds: %s\n", string(body))
 		return true
 	}
-	
+
 	return false
 }
 
@@ -114,7 +122,7 @@ func runEventLoop(eventsChan chan brain.DataEvent, myPet *brain.Pet) {
 	}
 }
 
-func runLoop(myPet *brain.Pet) {
+func runLoop(myPet *brain.Pet, win *window.Window) {
 	go myPet.LifeCycle()
 
 	uiTicker := time.NewTicker(2 * time.Second)
@@ -122,16 +130,17 @@ func runLoop(myPet *brain.Pet) {
 
 	for range uiTicker.C {
 		myPet.UpdateVitals()
-		face := myPet.GetFace()
-		if (face == ui.Themes[myPet.Species].Happy || face == ui.Themes[myPet.Species].Neutral) && rand.Intn(5) == 0 {
-			face = myPet.GetBlinkFace()
-		}
-		ui.DrawPet(face, myPet.Level, myPet.Hunger, myPet.Mood, myPet.Messages, myPet.CPULoad)
-		tray.Update(myPet.Level, myPet.Hunger, myPet.Mood)
+
+		win.Update(window.PetState{
+			Level:    myPet.Level,
+			Hunger:   myPet.Hunger,
+			Mood:     myPet.Mood,
+			Messages: myPet.Messages,
+			CPULoad:  myPet.CPULoad,
+		})
 
 		hour := time.Now().Hour()
 		if hour >= 23 {
-			// Desktop notification
 			beeep.Alert("Go easy on yourself 🌙", "Huy, it's late. Don't forget to rest.", "")
 		}
 	}

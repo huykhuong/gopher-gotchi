@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gen2brain/beeep"
 	"github.com/shirou/gopsutil/cpu"
 )
 type Memory struct {
@@ -64,10 +63,9 @@ func (p *Pet) HandleCommand(cmd string) string {
 		p.Log("💖 Huy sent a virtual hug.")
 		return "˶^ ᴗ ^˶ I feel the sync. Thank you, Huy."
 	case "joke":
-		p.Log("🔍 Diana is scanning terrestrial archives...")
 		joke := fetchArchiveData()
-
-		return fmt.Sprintf("I found this entry in the historical archives, Huy:\n\n%s", joke)
+		p.Log(fmt.Sprintf("I found this entry in the historical archives, Huy:\n\n%s", joke))
+		return ""
 	default:
 		return "Unknown command"
 	}
@@ -101,10 +99,10 @@ func (p *Pet) Eat(exp int) {
 		p.Hunger = 0
 	}
 
-	p.Experience += 500
-	p.checkLevelUp()
-
+	p.Experience += exp
+	
 	p.Log(fmt.Sprintf("😋 Gained %d experience points!", exp))
+	p.checkLevelUp()
 }
 
 func (p *Pet) CheckIdle() {
@@ -112,9 +110,7 @@ func (p *Pet) CheckIdle() {
 		p.Mood = "Lonely 💔"
 		p.IdleNudged = true
 
-		msg := "Huy? The data stream is thinning. Are you still there?"
-		beeep.Notify("Pragmata Protocol", msg, "")
-		p.Log("📢 Sent a nudge for attention")
+		p.Log("Huy? The data stream is thinning. Are you still there?")
 	}
 }
 
@@ -128,14 +124,8 @@ func (p *Pet) checkLevelUp() {
 		p.EnqueueSync(memory)
 
 		// Internal log
-		msg := fmt.Sprintf("✨ LEVEL UP! %s is now Level %d!\n", p.Name, p.Level) 
+		msg := fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level) 
 		p.Log(msg)
-
-		// Desktop notification
-		err := beeep.Alert("Gopher-Gotchi Evolution", msg, "")
-		if err != nil {
-			p.Log(fmt.Sprintf("❌ Failed to send desktop notification: %v\n", err))
-		}
 	}
 }
 
@@ -159,34 +149,6 @@ func (p *Pet) LifeCycle() {
 			p.Mood = "Happy 😊"
 		}
 	}
-}
-
-func (p *Pet) GetFace() string {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	theme := ui.Themes[p.Species]
-	hour := time.Now().Hour()
-
-	if hour >= 22 || hour < 5 {
-		return `  (  ˶- ᴗ -˶ ) zZ`
-	}
-
-	if hour >= 5 && hour < 9 {
-		return `  (  ˶O ᴗ O˶ ) ~`
-	}
-
-	if p.Hunger >= 100 {
-		return theme.Dead
-	}
-	if p.Hunger > 70 {
-		return theme.Hungry
-	}
-	if p.Mood == "Happy" {
-		return theme.Happy
-	}
-
-	return theme.Neutral
 }
 
 func (p *Pet) UpdateVitals() {
