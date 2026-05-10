@@ -34,8 +34,20 @@ static void makeWindowFloating(void* nswin) {
 		NSWindowCollectionBehaviorIgnoresCycle];
 	[win setBackgroundColor:[NSColor clearColor]];
 	[win setOpaque:NO];
-	[win setHasShadow:YES];
-	[win setMovable:NO]; // We handle dragging ourselves via JS
+	[win setHasShadow:NO];
+	[win setMovable:NO];
+	[win setStyleMask:NSWindowStyleMaskBorderless];
+
+	NSView* content = [win contentView];
+	NSMutableArray* queue = [NSMutableArray arrayWithObject:content];
+	while (queue.count > 0) {
+		NSView* v = queue[0];
+		[queue removeObjectAtIndex:0];
+		if ([NSStringFromClass([v class]) containsString:@"WKWebView"]) {
+			[v setValue:@NO forKey:@"drawsBackground"];
+		}
+		[queue addObjectsFromArray:v.subviews];
+	}
 }
 */
 import "C"
