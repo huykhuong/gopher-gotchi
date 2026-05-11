@@ -48,6 +48,11 @@
   }
   .bubble.show { opacity: 1; transform: translateY(0); }
 
+  .gift-reveal { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .gift-tagline { font-size: 10px; color: #1c1a2c; line-height: 1.4; }
+  .gift-name { font-size: 10px; font-weight: 700; color: #1c1a2c; }
+  .gift-rarity { font-size: 8px; color: rgba(80,60,120,0.7); letter-spacing: 0.05em; text-transform: uppercase; }
+
   /* Level badge */
   .level-badge {
     background: linear-gradient(135deg, #7c3aed, #a855f7);
@@ -263,7 +268,12 @@
 
   function showBubble(text) {
     const el = document.getElementById('bubble');
-    el.textContent = text;
+    const isGift = text.trimStart().startsWith('<');
+    if (isGift) {
+      el.innerHTML = text;
+    } else {
+      el.textContent = text;
+    }
     el.classList.add('show');
     if (bubbleTimer) clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(function() { el.classList.remove('show'); }, 5000);

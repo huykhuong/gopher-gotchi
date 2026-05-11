@@ -22,7 +22,7 @@ func main() {
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 
 	speciesFlag := flag.String("species", "diana", "The species of the companion")
-	devFlag     := flag.Bool("dev", false, "Load UI from filesystem for live editing")
+	devFlag := flag.Bool("dev", false, "Load UI from filesystem for live editing")
 	flag.Parse()
 
 	if handleCLICommands() {
@@ -120,7 +120,7 @@ func runEventLoop(eventsChan chan brain.DataEvent, myPet *brain.Pet) {
 
 func runLoop(myPet *brain.Pet, win *window.Window) {
 	go myPet.LifeCycle()
-	go myPet.RunJokeLoop()
+	go myPet.RunInteractionLoop()
 
 	uiTicker := time.NewTicker(2 * time.Second)
 	defer uiTicker.Stop()

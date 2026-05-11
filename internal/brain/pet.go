@@ -26,7 +26,7 @@ type Pet struct {
 	Mood         string    `json:"mood"`
 	LastEaten    time.Time `json:"last_eaten"`
 	IdleNudged   bool      `json:"-"`
-	Message      string  `json:"-"` // No need to save the log to JSON
+	Message      string    `json:"-"` // No need to save the log to JSON
 	CPULoad      int       `json:"-"`
 	BatteryLevel int       `json:"-"`
 	IsCharging   bool      `json:"-"`
@@ -105,21 +105,6 @@ func (p *Pet) CheckIdle() {
 	}
 }
 
-func (p *Pet) checkLevelUp() {
-	target := p.Level * 100
-	if p.Experience >= target {
-		p.Level++
-		p.Experience = 0
-
-		memory := p.CreateMemory(fmt.Sprintf("We reached a new level of synchronization today. I feel closer to your world, Huy. I'm now Level %d", p.Level))
-		p.EnqueueSync(memory)
-
-		// Internal log
-		msg := fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level)
-		p.Log(msg)
-	}
-}
-
 // LifeCycle simulates the passage of time (the pet gets hungrier as you don't code)
 func (p *Pet) LifeCycle() {
 	ticker := time.NewTicker(15 * time.Minute)
@@ -167,22 +152,58 @@ func (p *Pet) EnqueueSync(memory *Memory) {
 	}
 }
 
-func (p *Pet) RunJokeLoop() {
+func (p *Pet) RunInteractionLoop() {
 	for {
-		<-time.After(nextJokeDelay())
-		joke := FetchArchiveData()
-		p.Log(fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke))
+		<-time.After(nextInteractionDelay())
+
+		action := rand.IntN(2)
+		switch action {
+		case 0:
+			gift := p.findGift()
+			p.Log(gift)
+		case 1:
+			joke := FetchArchiveData()
+			p.Log(fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke))
+		}
 	}
 }
 
-// PERSISTENCE LOGIC
 func LoadPet() (*Pet, error) {
 	fmt.Println("🌐 Connecting to Pragmata Cloud...")
 	return LoadFromCloud()
 }
 
-func nextJokeDelay() time.Duration {
+// INTERNAL LOGIC
+
+func nextInteractionDelay() time.Duration {
 	const minD = 10 * time.Second
 	const maxD = 3 * time.Minute
 	return minD + time.Duration(rand.Int64N(int64(maxD-minD)))
+}
+
+func (p *Pet) checkLevelUp() {
+	target := p.Level * 100
+	if p.Experience >= target {
+		p.Level++
+		p.Experience = 0
+
+		memory := p.CreateMemory(fmt.Sprintf("We reached a new level of synchronization today. I feel closer to your world, Huy. I'm now Level %d", p.Level))
+		p.EnqueueSync(memory)
+
+		// Internal log
+		msg := fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level)
+		p.Log(msg)
+	}
+}
+
+func (p *Pet) findGift() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	gift := ui.DigitalTreasury[rand.IntN(len(ui.DigitalTreasury))]
+
+	p.Log(fmt.Sprintf("✨ Discovery: I found a %s in the buffer.", gift.Name))
+	p.Mood = "happy"
+
+	return fmt.Sprintf(`<div class="gift-reveal"><div class="gift-tagline">✨ From the digital void</div>%s<div class="gift-name">%s</div><div class="gift-rarity">%s Artifact</div></div>`, gift.Art, gift.Name, gift.Rarity)
 }
