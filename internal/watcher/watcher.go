@@ -123,6 +123,7 @@ func UpdateXP(path string, myPet *brain.Pet) {
 
 	currentSize := info.Size()
 	lastSize, seen := sizeCache[path]
+	// Size cache is used to store initial sizes of the registered folders
 	sizeCache[path] = currentSize
 
 	if !seen {

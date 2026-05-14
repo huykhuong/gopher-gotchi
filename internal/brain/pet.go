@@ -18,20 +18,22 @@ type Memory struct {
 
 type Pet struct {
 	mu           sync.RWMutex
-	Name         string    `json:"name"`
-	Species      string    `json:"species"`
-	Level        int       `json:"level"`
-	Experience   int       `json:"experience"`
-	Hunger       int       `json:"hunger"` // 0 is full, 100 is starving
-	Mood         string    `json:"mood"`
-	LastEaten    time.Time `json:"last_eaten"`
-	IdleNudged   bool      `json:"-"`
-	Message      string    `json:"-"` // No need to save the log to JSON
-	CPULoad      int       `json:"-"`
-	BatteryLevel int       `json:"-"`
-	IsCharging   bool      `json:"-"`
-	Memories     []Memory  `json:"-"` // We don't save this in diana.json
-	Tasks        chan Task `json:"-"`
+	Name         string      `json:"name"`
+	Species      string      `json:"species"`
+	Level        int         `json:"level"`
+	Experience   int         `json:"experience"`
+	Hunger       int         `json:"hunger"` // 0 is full, 100 is starving
+	Mood         string      `json:"mood"`
+	LastEaten    time.Time   `json:"last_eaten"`
+	IdleNudged   bool        `json:"-"`
+	Message      string      `json:"-"` // No need to save the log to JSON
+	CPULoad      int         `json:"-"`
+	BatteryLevel int         `json:"-"`
+	IsCharging   bool        `json:"-"`
+	Memories     []Memory    `json:"-"` // We don't save this in diana.json
+	Tasks        chan Task   `json:"-"`
+	RecentSaves  []time.Time `json:"-"`
+	FlowActive   bool        `json:"-"`
 }
 
 func NewPet(name string, species string) *Pet {
@@ -94,6 +96,7 @@ func (p *Pet) Eat(exp int) {
 
 	p.Log(fmt.Sprintf("😋 Gained %d experience points!", exp))
 	p.checkLevelUp()
+	p.registerActivity()
 }
 
 func (p *Pet) CheckIdle() {
@@ -206,4 +209,24 @@ func (p *Pet) findGift() string {
 	p.Mood = "happy"
 
 	return fmt.Sprintf(`<div class="gift-reveal"><div class="gift-tagline">✨ From the digital void</div>%s<div class="gift-name">%s</div><div class="gift-rarity">%s Artifact</div></div>`, gift.Art, gift.Name, gift.Rarity)
+}
+
+func (p *Pet) registerActivity() {
+	now := time.Now()
+
+	var filtered []time.Time
+	for _, t := range p.RecentSaves {
+		if now.Sub(t) < 10*time.Minute {
+			filtered = append(filtered, t)
+		}
+	}
+	filtered = append(filtered, now)
+
+	p.RecentSaves = filtered
+
+	if len(p.RecentSaves) >= 3 && !p.FlowActive {
+		p.FlowActive = true
+		p.Mood = "Elated 😍"
+		p.Log("🔥 Wow! You're crushing it Huy.")
+	}
 }
