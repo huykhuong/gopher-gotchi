@@ -57,7 +57,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	win = window.New(cleanup, *devFlag)
+	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
 
 	startWatcher(eventsChan)
 	api.StartServer(myPet)

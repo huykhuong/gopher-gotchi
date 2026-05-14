@@ -97,7 +97,7 @@ type Window struct {
 //
 // Must be called from the main OS thread (runtime.LockOSThread is applied
 // automatically by the webview package's init()).
-func New(onQuit func(), dev bool) *Window {
+func New(onQuit func(), onAction func(string), dev bool) *Window {
 	runtime.LockOSThread()
 
 	w := &Window{
@@ -143,6 +143,13 @@ func New(onQuit func(), dev bool) *Window {
 		})
 		if w.onQuit != nil {
 			go w.onQuit()
+		}
+	})
+
+	// JS binding: petAction(cmd) – called by the radial menu in index.html
+	w.wv.Bind("petAction", func(cmd string) {
+		if onAction != nil {
+			onAction(cmd)
 		}
 	})
 

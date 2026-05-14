@@ -6,4 +6,5 @@ gopher-gotchi
 .DS_Store
 
 # Ignore environment files if you use them
-.env
+.envtmp/
+build-errors.log

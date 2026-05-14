@@ -173,8 +173,21 @@
     flex-shrink: 0;
   }
 
-  /* Quit button */
-  .quit-btn {
+  /* Button row */
+  .button-row {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  /* Action group — wraps the Action button and the radial menu */
+  .action-group {
+    position: relative;
+  }
+
+  /* Action & Quit buttons */
+  .action-btn, .quit-btn {
     background: rgba(0,0,0,0.35);
     border: 1px solid rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.40);
@@ -183,15 +196,178 @@
     border-radius: 99px;
     cursor: pointer;
     transition: background 0.2s, color 0.2s, border-color 0.2s;
-    flex-shrink: 0;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+  }
+  .action-btn:hover {
+    background: rgba(168,85,247,0.22);
+    border-color: rgba(168,85,247,0.5);
+    color: #c4a4f7;
   }
   .quit-btn:hover {
     background: rgba(239,68,68,0.25);
     border-color: rgba(239,68,68,0.5);
     color: #ef4444;
   }
+
+  /* Mission panel — overlays the card with a scrollable objective list */
+  .mission-panel {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 12, 28, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+    display: none;
+    flex-direction: column;
+    padding: 10px 12px 12px;
+    z-index: 20;
+    box-shadow: 0 0 32px rgba(168, 85, 247, 0.15);
+  }
+  .mission-panel.show { display: flex; }
+
+  .mission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .mission-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #c4a4f7;
+    letter-spacing: 0.08em;
+  }
+  .mission-close {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.55);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .mission-close:hover {
+    background: rgba(239,68,68,0.2);
+    border-color: rgba(239,68,68,0.5);
+    color: #ef4444;
+  }
+
+  .mission-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+    padding-right: 2px;
+  }
+  .mission-list::-webkit-scrollbar { width: 3px; }
+  .mission-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .mission-list::-webkit-scrollbar-track { background: transparent; }
+
+  .mission-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mission-id {
+    font-size: 8px;
+    font-weight: 700;
+    color: #a855f7;
+    letter-spacing: 0.06em;
+    font-family: ui-monospace, "SF Mono", monospace;
+  }
+  .mission-text {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.35;
+  }
+  .mission-status {
+    font-size: 7.5px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 99px;
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 1px;
+  }
+  .mission-status.in-progress { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.35); }
+  .mission-status.in-review   { background: rgba(168, 85, 247, 0.18); color: #c4a4f7; border: 1px solid rgba(168,85,247,0.35); }
+  .mission-status.backlog     { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
+  .mission-status.canceled    { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .mission-status.done,
+  .mission-status.completed   { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+  .mission-status.todo        { background: rgba(250,204,21,0.15); color: #fde047; border: 1px solid rgba(250,204,21,0.3); }
+  .mission-empty {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    text-align: center;
+    padding: 24px 8px;
+    line-height: 1.4;
+  }
+
+  /* Radial menu — sits above the Action button */
+  .radial-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  .radial-menu.open { pointer-events: auto; }
+
+  .radial-item {
+    position: absolute;
+    top: -18px;
+    left: -18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(20, 18, 36, 0.85);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.25s ease,
+                background 0.2s, border-color 0.2s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .radial-item:hover {
+    background: rgba(168,85,247,0.35);
+    border-color: rgba(168,85,247,0.6);
+  }
+  .radial-menu.open .radial-item { opacity: 1; }
+  /* Fan upward — 4 items in an arc */
+  .radial-menu.open .radial-item:nth-child(1) { transform: translate(-58px, -16px) scale(1); transition-delay: 0.00s; }
+  .radial-menu.open .radial-item:nth-child(2) { transform: translate(-22px, -52px) scale(1); transition-delay: 0.04s; }
+  .radial-menu.open .radial-item:nth-child(3) { transform: translate( 22px, -52px) scale(1); transition-delay: 0.08s; }
+  .radial-menu.open .radial-item:nth-child(4) { transform: translate( 58px, -16px) scale(1); transition-delay: 0.12s; }
 </style>
 <style id="sprite-style"></style>
 </head>
@@ -216,7 +392,27 @@
       <span class="stat-value" id="cpu-val">0%</span>
     </div>
   </div>
-  <button class="quit-btn" id="quit-btn" onclick="quitApp().catch(()=>{})">Quit</button>
+  <div class="button-row">
+    <div class="action-group">
+      <div class="radial-menu" id="radial-menu">
+        <button class="radial-item" data-action="gift"       title="Find a gift">🎁</button>
+        <button class="radial-item" data-action="hug"        title="Hug Diana">💖</button>
+        <button class="radial-item" data-action="joke"       title="Tell a joke">😂</button>
+        <button class="radial-item" data-action="objectives" title="Show objectives">🎯</button>
+      </div>
+      <button class="action-btn" id="action-btn">Action</button>
+    </div>
+    <button class="quit-btn" id="quit-btn" onclick="quitApp().catch(()=>{})">Quit</button>
+  </div>
+
+  <!-- Objectives panel — shown when mission data arrives -->
+  <div class="mission-panel" id="mission-panel">
+    <div class="mission-header">
+      <span class="mission-title">🎯 OBJECTIVES</span>
+      <button class="mission-close" id="mission-close" title="Close">×</button>
+    </div>
+    <div class="mission-list" id="mission-list"></div>
+  </div>
 </div>
 
 <script>
@@ -252,10 +448,34 @@
 
   setAnimation('idle');
 
-  // Drag
+  // Radial action menu
+  const actionBtn  = document.getElementById('action-btn');
+  const radialMenu = document.getElementById('radial-menu');
+
+  actionBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    radialMenu.classList.toggle('open');
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.radial-item') && e.target !== actionBtn) {
+      radialMenu.classList.remove('open');
+    }
+  });
+
+  document.querySelectorAll('.radial-item').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const action = item.dataset.action;
+      window.petAction(action);
+      radialMenu.classList.remove('open');
+    });
+  });
+
+  // Drag — ignore clicks on any interactive element
   let dragging = false, sx = 0, sy = 0;
   document.addEventListener('mousedown', function(e) {
-    if (e.target.id === 'quit-btn') return;
+    if (e.target.closest('.quit-btn, .action-btn, .radial-item, .mission-panel')) return;
     dragging = true; sx = e.screenX; sy = e.screenY;
     e.preventDefault();
   });
@@ -301,7 +521,54 @@
     document.getElementById('cpu-bar').style.width = c + '%';
     document.getElementById('cpu-val').textContent = c + '%';
 
-    if (s.message) {showBubble(s.message)}
+    if (s.message) {
+      // Detect a mission list by the task line pattern: "> [ID] title (status)"
+      if (/^>\s*\[[^\]]+\].*\([^)]+\)\s*$/m.test(s.message)) {
+        showMission(s.message);
+      } else {
+        showBubble(s.message);
+      }
+    }
+  }
+
+  // Mission panel — rendered when an objectives message arrives
+  const missionPanel = document.getElementById('mission-panel');
+  const missionList  = document.getElementById('mission-list');
+  document.getElementById('mission-close').addEventListener('click', function() {
+    missionPanel.classList.remove('show');
+  });
+
+  function escapeHTML(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function statusClass(name) {
+    return (name || '').toLowerCase().trim().replace(/\s+/g, '-');
+  }
+
+  function showMission(text) {
+    const items = [];
+    const lineRegex = /^>\s*\[([^\]]+)\]\s*(.+?)\s*\(([^)]+)\)\s*$/;
+    text.split('\n').forEach(function(line) {
+      const m = line.match(lineRegex);
+      if (m) items.push({ id: m[1], title: m[2], status: m[3] });
+    });
+
+    if (items.length === 0) {
+      missionList.innerHTML = '<div class="mission-empty">✨ All clear, Huy.<br>No active objectives in this sector.</div>';
+    } else {
+      missionList.innerHTML = items.map(function(it) {
+        return '<div class="mission-item">' +
+                 '<div class="mission-id">' + escapeHTML(it.id) + '</div>' +
+                 '<div class="mission-text">' + escapeHTML(it.title) + '</div>' +
+                 '<div class="mission-status ' + statusClass(it.status) + '">' + escapeHTML(it.status) + '</div>' +
+               '</div>';
+      }).join('');
+    }
+
+    missionPanel.classList.add('show');
   }
 
   function showBubble(text) {
@@ -310,7 +577,7 @@
     if (isGift) {
       el.innerHTML = text;
     } else {
-      el.textContent = text;
+      el.innerText = text;
     }
     el.classList.add('show');
     if (bubbleTimer) clearTimeout(bubbleTimer);

@@ -2,6 +2,7 @@ package brain
 
 import (
 	"fmt"
+
 	"gopher-gotchi/internal/ui"
 	"math/rand/v2"
 	"sync"
@@ -62,6 +63,17 @@ func (p *Pet) HandleCommand(cmd string) {
 	case "hug":
 		p.Mood = "Happy 😊"
 		p.Log("💖 ˶^ ᴗ ^˶ I feel the warmth. Thank you, Huy.")
+	case "joke":
+		joke := FetchArchiveData()
+		p.Log(fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke))
+	case "gift":
+		p.Log(p.findGift())
+	case "objectives", "mission":
+		objectives, err := FetchObjectives()
+		if err != nil {
+			fmt.Print(err.Error())
+		}
+		p.Log(objectives)
 	default:
 		p.Log("Unknown command")
 	}
