@@ -128,6 +128,7 @@ func LoadFromCloud() (*Pet, error) {
 	var p Pet
 	err = json.Unmarshal([]byte(gistData.Files["diana.json"].Content), &p)
 	p.Tasks = make(chan Task, 10)
+
 	return &p, err
 }
 

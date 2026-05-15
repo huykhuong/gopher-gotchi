@@ -16,7 +16,7 @@ type LinearResponse struct {
 				Nodes []struct {
 					Identifier string `json:"identifier"`
 					Title      string `json:"title"`
-					State     struct {
+					State      struct {
 						Name string `json:"name"`
 					} `json:"state"`
 				} `json:"nodes"`
@@ -50,18 +50,18 @@ func FetchObjectives() (string, error) {
 	req.Header.Set("Authorization", apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5*time.Second}
+	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	
+
 	var result LinearResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}
-	
+
 	nodes := result.Data.Viewer.AssignedIssues.Nodes
 	if len(nodes) == 0 {
 		return "✨ All clear, Huy! No active objectives found in this sector.", nil
@@ -71,6 +71,6 @@ func FetchObjectives() (string, error) {
 	for _, issue := range nodes {
 		output += fmt.Sprintf("> [%s] %s (%s)\n\n", issue.Identifier, issue.Title, issue.State.Name)
 	}
-	
+
 	return output, nil
 }

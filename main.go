@@ -130,43 +130,19 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 		select {
 		case <-uiTicker.C:
 			myPet.UpdateVitals()
-
-			message := ""
-			if myPet.Message != "" {
-				message = myPet.Message
-				myPet.Message = ""
-			}
+			snap := myPet.TakeSnapshot()
 
 			win.Update(window.PetState{
-				Level:      myPet.Level,
-				Hunger:     myPet.Hunger,
-				Mood:       myPet.Mood,
-				Message:    message,
-				CPULoad:    myPet.CPULoad,
-				FlowActive: myPet.FlowActive,
+				Level:      snap.Level,
+				Hunger:     snap.Hunger,
+				Mood:       brain.GetAnimationForMood(snap.Mood),
+				Message:    snap.Message,
+				CPULoad:    snap.CPULoad,
+				FlowActive: snap.FlowActive,
 			})
 
-			hour := time.Now().Hour()
-			if hour >= 23 {
-				myPet.Log("Go easy on yourself 🌙, Huy. It's late. Don't forget to rest.")
-			}
-
 		case <-saveStreakCooldownTicker.C:
-			if !myPet.FlowActive {
-				continue
-			}
-			now := time.Now()
-			var fresh []time.Time
-			for _, t := range myPet.RecentSaves {
-				if now.Sub(t) < 20*time.Second {
-					fresh = append(fresh, t)
-				}
-			}
-			myPet.RecentSaves = fresh
-			if len(myPet.RecentSaves) == 0 {
-				myPet.FlowActive = false
-				myPet.Log("💤 Flow state ended.")
-			}
+			myPet.CooldownFlowState()
 		}
 	}
 }

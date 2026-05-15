@@ -14,14 +14,14 @@ static void moveWindowBy(void* nswin, double dx, double dy) {
 	[win setFrame:frame display:YES animate:NO];
 }
 
-static void positionWindowBottomRight(void* nswin, int width, int height, int margin) {
+static void positionWindowBottomLeft(void* nswin, int width, int height, int margin) {
 	NSWindow* win = (__bridge NSWindow*)nswin;
 	NSScreen* screen = [NSScreen mainScreen];
 	NSRect screen_frame = [screen visibleFrame];
 	NSRect frame;
 	frame.size.width = width;
 	frame.size.height = height;
-	frame.origin.x = screen_frame.origin.x + screen_frame.size.width - width - margin;
+	frame.origin.x = screen_frame.origin.x + margin;
 	frame.origin.y = screen_frame.origin.y + margin;
 	[win setFrame:frame display:YES animate:NO];
 }
@@ -56,6 +56,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"gopher-gotchi/internal/brain"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -78,12 +79,12 @@ const (
 
 // PetState is the data sent to the webview UI on each tick.
 type PetState struct {
-	Level      int    `json:"level"`
-	Hunger     int    `json:"hunger"`
-	Mood       string `json:"mood"`
-	Message    string `json:"message"`
-	CPULoad    int    `json:"cpuLoad"`
-	FlowActive bool   `json:"flowActive"`
+	Level      int        `json:"level"`
+	Hunger     int        `json:"hunger"`
+	Mood       brain.Mood `json:"mood"`
+	Message    string     `json:"message"`
+	CPULoad    int        `json:"cpuLoad"`
+	FlowActive bool       `json:"flowActive"`
 }
 
 // Window wraps a webview window that displays the floating pet UI.
@@ -120,7 +121,7 @@ func New(onQuit func(), onAction func(string), dev bool) *Window {
 	w.wv.Dispatch(func() {
 		nswin := w.wv.Window()
 		C.makeWindowFloating(nswin)
-		C.positionWindowBottomRight(
+		C.positionWindowBottomLeft(
 			nswin,
 			C.int(windowWidth),
 			C.int(windowHeight),

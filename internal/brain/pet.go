@@ -18,7 +18,7 @@ type Memory struct {
 }
 
 type Pet struct {
-	mu           sync.RWMutex
+	mu           sync.Mutex
 	Name         string      `json:"name"`
 	Species      string      `json:"species"`
 	Level        int         `json:"level"`
@@ -27,11 +27,11 @@ type Pet struct {
 	Mood         string      `json:"mood"`
 	LastEaten    time.Time   `json:"last_eaten"`
 	IdleNudged   bool        `json:"-"`
-	Message      string      `json:"-"` // No need to save the log to JSON
+	Message      string      `json:"-"`
 	CPULoad      int         `json:"-"`
 	BatteryLevel int         `json:"-"`
 	IsCharging   bool        `json:"-"`
-	Memories     []Memory    `json:"-"` // We don't save this in diana.json
+	Memories     []Memory    `json:"-"`
 	Tasks        chan Task   `json:"-"`
 	RecentSaves  []time.Time `json:"-"`
 	FlowActive   bool        `json:"-"`
@@ -39,43 +39,45 @@ type Pet struct {
 
 func NewPet(name string, species string) *Pet {
 	if _, ok := ui.Themes[species]; !ok {
-		species = "diana" // default to diana if the theme is not found
+		species = "diana"
 	}
 
-	p := &Pet{
+	return &Pet{
 		Name:      name,
 		Species:   species,
 		Level:     1,
 		Hunger:    0,
-		Mood:      "Happy",
+		Mood:      Happy,
 		LastEaten: time.Now(),
 		Message:   "📡 Connection established. Hello, Huy.",
 		Tasks:     make(chan Task, 10),
 	}
-
-	return p
 }
 
 func (p *Pet) HandleCommand(cmd string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	switch cmd {
 	case "ping":
-		p.Log("PONG")
+		p.Message = "PONG"
 	case "hug":
-		p.Mood = "Happy 😊"
-		p.Log("💖 ˶^ ᴗ ^˶ I feel the warmth. Thank you, Huy.")
+		p.Mood = Happy
+		p.Message = "💖 ˶^ ᴗ ^˶ I feel the warmth. Thank you, Huy."
 	case "joke":
 		joke := FetchArchiveData()
-		p.Log(fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke))
+		p.Message = fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke)
 	case "gift":
-		p.Log(p.findGift())
+		p.Message = p.giftMessage()
+		p.Mood = Happy
 	case "objectives", "mission":
 		objectives, err := FetchObjectives()
 		if err != nil {
 			fmt.Print(err.Error())
 		}
-		p.Log(objectives)
+		p.Message = objectives
 	default:
-		p.Log("Unknown command")
+		p.Message = "Unknown command"
 	}
 }
 
@@ -83,20 +85,16 @@ func (p *Pet) GetBlinkFace() string {
 	return ui.Themes[p.Species].Blink
 }
 
-func (p *Pet) Log(msg string) {
-	p.Message = msg
-}
-
 func (p *Pet) Eat(exp int) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if exp <= 0 {
 		return
 	}
 
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.LastEaten = time.Now()
-	p.Mood = "Happy 😊"
+	p.Mood = Happy
 	p.IdleNudged = false
 
 	p.Hunger -= (exp / 2)
@@ -105,18 +103,19 @@ func (p *Pet) Eat(exp int) {
 	}
 
 	p.Experience += exp
-
-	p.Log(fmt.Sprintf("😋 Gained %d experience points!", exp))
+	p.Message = fmt.Sprintf("😋 Gained %d experience points!", exp)
 	p.checkLevelUp()
 	p.registerActivity()
 }
 
 func (p *Pet) CheckIdle() {
-	if time.Since(p.LastEaten) > 10*time.Minute && !p.IdleNudged {
-		p.Mood = "Lonely 💔"
-		p.IdleNudged = true
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-		p.Log("Huy? The data stream is thinning. Are you still there?")
+	if time.Since(p.LastEaten) > 10*time.Minute && !p.IdleNudged {
+		p.Mood = Lonely
+		p.IdleNudged = true
+		p.Message = "Huy? The data stream is thinning. Are you still there?"
 	}
 }
 
@@ -124,41 +123,95 @@ func (p *Pet) CheckIdle() {
 func (p *Pet) LifeCycle() {
 	ticker := time.NewTicker(15 * time.Minute)
 	for range ticker.C {
+		p.mu.Lock()
 		p.Hunger += 5
-
-		// Check if we should nudge the user.
-		p.CheckIdle()
-
 		if p.Hunger > 100 {
 			p.Hunger = 100
-			p.Mood = "Starving 💀"
-		} else if p.Hunger > 70 {
-			p.Mood = "Grumpy 💢"
-		} else if p.IdleNudged {
-			p.Mood = "Lonely 💔"
-		} else {
-			p.Mood = "Happy 😊"
 		}
+
+		switch {
+		case p.Hunger > 70:
+			p.Mood = Hungry
+		case p.IdleNudged:
+			p.Mood = Lonely
+		default:
+			p.Mood = Happy
+		}
+
+		lastEaten := p.LastEaten
+		idleNudged := p.IdleNudged
+		p.mu.Unlock()
+
+		if time.Since(lastEaten) > 10*time.Minute && !idleNudged {
+			p.CheckIdle()
+		}
+	}
+}
+
+type Snapshot struct {
+	Level      int
+	Hunger     int
+	Mood       string
+	Message    string
+	CPULoad    int
+	FlowActive bool
+}
+
+func (p *Pet) TakeSnapshot() Snapshot {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	msg := p.Message
+	p.Message = ""
+
+	return Snapshot{
+		Level:      p.Level,
+		Hunger:     p.Hunger,
+		Mood:       p.Mood,
+		Message:    msg,
+		CPULoad:    p.CPULoad,
+		FlowActive: p.FlowActive,
 	}
 }
 
 func (p *Pet) UpdateVitals() {
 	c, _ := cpu.Percent(0, false)
 	if len(c) > 0 {
+		p.mu.Lock()
 		p.CPULoad = int(c[0])
+		p.mu.Unlock()
+	}
+}
+
+func (p *Pet) CooldownFlowState() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if !p.FlowActive {
+		return
+	}
+
+	now := time.Now()
+	var fresh []time.Time
+	for _, t := range p.RecentSaves {
+		if now.Sub(t) < 20*time.Second {
+			fresh = append(fresh, t)
+		}
+	}
+	p.RecentSaves = fresh
+
+	if len(p.RecentSaves) == 0 {
+		p.FlowActive = false
+		p.Message = "💤 Flow state ended."
 	}
 }
 
 func (p *Pet) CreateMemory(event string) *Memory {
-	newMemory := Memory{
+	return &Memory{
 		Timestamp: time.Now().Format("2006-01-02 15:04"),
 		Level:     p.Level,
 		Message:   event,
 	}
-
-	p.Log("💾 Memory Archived: " + event)
-
-	return &newMemory
 }
 
 func (p *Pet) EnqueueSync(memory *Memory) {
@@ -171,14 +224,17 @@ func (p *Pet) RunInteractionLoop() {
 	for {
 		<-time.After(nextInteractionDelay())
 
-		action := rand.IntN(2)
-		switch action {
+		switch rand.IntN(2) {
 		case 0:
-			gift := p.findGift()
-			p.Log(gift)
+			p.mu.Lock()
+			p.Message = p.giftMessage()
+			p.Mood = Happy
+			p.mu.Unlock()
 		case 1:
+			p.mu.Lock()
 			joke := FetchArchiveData()
-			p.Log(fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke))
+			p.Message = fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke)
+			p.mu.Unlock()
 		}
 	}
 }
@@ -188,7 +244,7 @@ func LoadPet() (*Pet, error) {
 	return LoadFromCloud()
 }
 
-// INTERNAL LOGIC
+// INTERNAL HELPERS — always called with p.mu already held
 
 func nextInteractionDelay() time.Duration {
 	const minD = 10 * time.Second
@@ -202,24 +258,19 @@ func (p *Pet) checkLevelUp() {
 		p.Level++
 		p.Experience = 0
 
-		memory := p.CreateMemory(fmt.Sprintf("We reached a new level of synchronization today. I feel closer to your world, Huy. I'm now Level %d", p.Level))
-		p.EnqueueSync(memory)
+		memory := &Memory{
+			Timestamp: time.Now().Format("2006-01-02 15:04"),
+			Level:     p.Level,
+			Message:   fmt.Sprintf("We reached a new level of synchronization today. I feel closer to your world, Huy. I'm now Level %d", p.Level),
+		}
+		p.Message = fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level)
 
-		// Internal log
-		msg := fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level)
-		p.Log(msg)
+		go p.EnqueueSync(memory)
 	}
 }
 
-func (p *Pet) findGift() string {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
+func (p *Pet) giftMessage() string {
 	gift := ui.DigitalTreasury[rand.IntN(len(ui.DigitalTreasury))]
-
-	p.Log(fmt.Sprintf("✨ Discovery: I found a %s in the buffer.", gift.Name))
-	p.Mood = "happy"
-
 	return fmt.Sprintf(`<div class="gift-reveal"><div class="gift-tagline">✨ From the digital void</div>%s<div class="gift-name">%s</div><div class="gift-rarity">%s Artifact</div></div>`, gift.Art, gift.Name, gift.Rarity)
 }
 
@@ -232,13 +283,11 @@ func (p *Pet) registerActivity() {
 			filtered = append(filtered, t)
 		}
 	}
-	filtered = append(filtered, now)
-
-	p.RecentSaves = filtered
+	p.RecentSaves = append(filtered, now)
 
 	if len(p.RecentSaves) >= 3 && !p.FlowActive {
 		p.FlowActive = true
-		p.Mood = "Elated 😍"
-		p.Log("🔥 Wow! You're crushing it Huy.")
+		p.Mood = Elated
+		p.Message = "🔥 Wow! You're crushing it Huy."
 	}
 }
