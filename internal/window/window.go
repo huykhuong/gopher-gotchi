@@ -60,6 +60,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"unsafe"
 
 	webview "github.com/webview/webview_go"
@@ -67,6 +68,12 @@ import (
 
 //go:embed index.html
 var indexHTML string
+
+//go:embed styles.css
+var stylesCSS string
+
+//go:embed script.js
+var scriptJS string
 
 //go:embed spritesheet.webp
 var Spritesheet string
@@ -114,7 +121,9 @@ func New(onQuit func(), onAction func(string), dev bool) *Window {
 		htmlPath := filepath.Join(cwd, "internal", "window", "index.html")
 		w.wv.Navigate("file://" + htmlPath)
 	} else {
-		w.wv.SetHtml(indexHTML)
+		html := strings.ReplaceAll(indexHTML, `<link rel="stylesheet" href="styles.css">`, "<style>"+stylesCSS+"</style>")
+		html = strings.ReplaceAll(html, `<script src="script.js"></script>`, "<script>"+scriptJS+"</script>")
+		w.wv.SetHtml(html)
 	}
 
 	// Position and style the native NSWindow after the webview is created.
