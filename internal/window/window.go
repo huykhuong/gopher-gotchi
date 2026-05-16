@@ -76,7 +76,7 @@ var stylesCSS string
 var scriptJS string
 
 //go:embed spritesheet.webp
-var Spritesheet string
+var Spritesheet []byte
 
 const (
 	windowWidth  = 200
@@ -86,12 +86,13 @@ const (
 
 // PetState is the data sent to the webview UI on each tick.
 type PetState struct {
-	Level      int        `json:"level"`
-	Hunger     int        `json:"hunger"`
-	Mood       brain.Mood `json:"mood"`
-	Message    string     `json:"message"`
-	CPULoad    int        `json:"cpuLoad"`
-	FlowActive bool       `json:"flowActive"`
+	Level            int                        `json:"level"`
+	Hunger           int                        `json:"hunger"`
+	Mood             brain.Mood                 `json:"mood"`
+	Message          string                     `json:"message"`
+	CPULoad          int                        `json:"cpuLoad"`
+	FlowActive       bool                       `json:"flowActive"`
+	WeatherKnowledge brain.ProcessedWeatherData `json:"weatherKnowledge"`
 }
 
 // Window wraps a webview window that displays the floating pet UI.

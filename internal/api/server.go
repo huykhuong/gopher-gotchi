@@ -3,11 +3,11 @@ package api
 import (
 	"fmt"
 	"gopher-gotchi/internal/brain"
-	"gopher-gotchi/internal/window"
+
 	"net/http"
 )
 
-func StartServer(p *brain.Pet) {
+func StartServer(p *brain.Pet, spritesheet []byte) {
 	http.HandleFunc("/tell", func(w http.ResponseWriter, r *http.Request) {
 		cmd := r.URL.Query().Get("cmd")
 		if cmd == "" {
@@ -20,7 +20,7 @@ func StartServer(p *brain.Pet) {
 
 	http.HandleFunc("/spritesheet", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/webp")
-		w.Write([]byte(window.Spritesheet))
+		w.Write(spritesheet)
 	})
 
 	go http.ListenAndServe(":9090", nil)

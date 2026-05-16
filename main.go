@@ -60,7 +60,7 @@ func main() {
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
 
 	startWatcher(eventsChan)
-	api.StartServer(myPet)
+	api.StartServer(myPet, window.Spritesheet)
 	brain.StartWorkerPool(myPet.Tasks)
 
 	go runEventLoop(eventsChan, myPet)
@@ -121,10 +121,16 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 	go myPet.LifeCycle()
 	go myPet.RunInteractionLoop()
 
+	if weather, err := brain.GetWeatherData(); err == nil {
+		myPet.WeatherKnowledge = weather
+	}
+
 	uiTicker := time.NewTicker(2 * time.Second)
 	saveStreakCooldownTicker := time.NewTicker(20 * time.Second)
+	weatherTicker := time.NewTicker(15 * time.Minute)
 	defer uiTicker.Stop()
 	defer saveStreakCooldownTicker.Stop()
+	defer weatherTicker.Stop()
 
 	for {
 		select {
@@ -133,16 +139,21 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 			snap := myPet.TakeSnapshot()
 
 			win.Update(window.PetState{
-				Level:      snap.Level,
-				Hunger:     snap.Hunger,
-				Mood:       brain.GetAnimationForMood(snap.Mood),
-				Message:    snap.Message,
-				CPULoad:    snap.CPULoad,
-				FlowActive: snap.FlowActive,
+				Level:            snap.Level,
+				Hunger:           snap.Hunger,
+				Mood:             brain.GetAnimationForMood(snap.Mood),
+				Message:          snap.Message,
+				CPULoad:          snap.CPULoad,
+				FlowActive:       snap.FlowActive,
+				WeatherKnowledge: myPet.WeatherKnowledge,
 			})
 
 		case <-saveStreakCooldownTicker.C:
 			myPet.CooldownFlowState()
+		case <-weatherTicker.C:
+			if weather, err := brain.GetWeatherData(); err == nil {
+				myPet.WeatherKnowledge = weather
+			}
 		}
 	}
 }

@@ -18,23 +18,24 @@ type Memory struct {
 }
 
 type Pet struct {
-	mu           sync.Mutex
-	Name         string      `json:"name"`
-	Species      string      `json:"species"`
-	Level        int         `json:"level"`
-	Experience   int         `json:"experience"`
-	Hunger       int         `json:"hunger"` // 0 is full, 100 is starving
-	Mood         string      `json:"mood"`
-	LastEaten    time.Time   `json:"last_eaten"`
-	IdleNudged   bool        `json:"-"`
-	Message      string      `json:"-"`
-	CPULoad      int         `json:"-"`
-	BatteryLevel int         `json:"-"`
-	IsCharging   bool        `json:"-"`
-	Memories     []Memory    `json:"-"`
-	Tasks        chan Task   `json:"-"`
-	RecentSaves  []time.Time `json:"-"`
-	FlowActive   bool        `json:"-"`
+	mu               sync.Mutex
+	Name             string               `json:"name"`
+	Species          string               `json:"species"`
+	Level            int                  `json:"level"`
+	Experience       int                  `json:"experience"`
+	Hunger           int                  `json:"hunger"` // 0 is full, 100 is starving
+	Mood             string               `json:"mood"`
+	LastEaten        time.Time            `json:"last_eaten"`
+	IdleNudged       bool                 `json:"-"`
+	Message          string               `json:"-"`
+	CPULoad          int                  `json:"-"`
+	BatteryLevel     int                  `json:"-"`
+	IsCharging       bool                 `json:"-"`
+	Memories         []Memory             `json:"-"`
+	Tasks            chan Task            `json:"-"`
+	RecentSaves      []time.Time          `json:"-"`
+	FlowActive       bool                 `json:"-"`
+	WeatherKnowledge ProcessedWeatherData `json:"-"`
 }
 
 func NewPet(name string, species string) *Pet {
