@@ -3,6 +3,7 @@ package brain
 import (
 	"fmt"
 
+	"gopher-gotchi/internal/api"
 	"gopher-gotchi/internal/ui"
 	"math/rand/v2"
 	"sync"
@@ -35,7 +36,7 @@ type Pet struct {
 	Tasks            chan Task            `json:"-"`
 	RecentSaves      []time.Time          `json:"-"`
 	FlowActive       bool                 `json:"-"`
-	WeatherKnowledge ProcessedWeatherData `json:"-"`
+	WeatherKnowledge api.ProcessedWeatherData `json:"-"`
 }
 
 func NewPet(name string, species string) *Pet {
@@ -72,7 +73,7 @@ func (p *Pet) HandleCommand(cmd string) {
 		p.Message = p.giftMessage()
 		p.Mood = Happy
 	case "objectives", "mission":
-		objectives, err := FetchObjectives()
+		objectives, err := api.FetchObjectives()
 		if err != nil {
 			fmt.Print(err.Error())
 		}

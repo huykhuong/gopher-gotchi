@@ -1,4 +1,4 @@
-package brain
+package api
 
 import (
 	"encoding/json"

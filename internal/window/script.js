@@ -166,7 +166,7 @@ function initRain(count) {
       y: Math.random() * 340,
       len: Math.random() * 9 + 5,
       speed: Math.random() * 4 + 5,
-      alpha: Math.random() * 0.3 + 0.12
+      alpha: Math.random() * 0.9 + 0.7
     };
   });
 }
@@ -427,7 +427,7 @@ function drawWeatherFrame() {
     }
 
   } else if (condition === 'Raining' || condition === 'Stormy') {
-    wctx.lineWidth = 0.8;
+    wctx.lineWidth = 2;
     for (var di = 0; di < drops.length; di++) {
       var d = drops[di];
       d.y += d.speed;

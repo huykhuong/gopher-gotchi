@@ -7,7 +7,6 @@ import (
 	"gopher-gotchi/internal/brain"
 	"gopher-gotchi/internal/watcher"
 	"gopher-gotchi/internal/window"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -24,10 +23,6 @@ func main() {
 	speciesFlag := flag.String("species", "diana", "The species of the companion")
 	devFlag := flag.Bool("dev", false, "Load UI from filesystem for live editing")
 	flag.Parse()
-
-	if handleCLICommands() {
-		return
-	}
 
 	myPet := loadOrCreatePet(*speciesFlag)
 
@@ -60,7 +55,7 @@ func main() {
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
 
 	startWatcher(eventsChan)
-	api.StartServer(myPet, window.Spritesheet)
+	api.StartServer(window.Spritesheet)
 	brain.StartWorkerPool(myPet.Tasks)
 
 	go runEventLoop(eventsChan, myPet)
@@ -73,20 +68,6 @@ func main() {
 
 	// Run blocks the main thread until the window is closed.
 	win.Run()
-}
-
-func handleCLICommands() bool {
-	if len(os.Args) > 2 && os.Args[1] == "tell" {
-		command := os.Args[2]
-		_, err := http.Get("http://localhost:9090/tell?cmd=" + command)
-		if err != nil {
-			fmt.Println("❌ Could not reach Diana. Maybe she's sleeping?")
-			return true
-		}
-		return true
-	}
-
-	return false
 }
 
 func loadOrCreatePet(species string) *brain.Pet {
@@ -121,7 +102,7 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 	go myPet.LifeCycle()
 	go myPet.RunInteractionLoop()
 
-	if weather, err := brain.GetWeatherData(); err == nil {
+	if weather, err := api.GetWeatherData(); err == nil {
 		myPet.WeatherKnowledge = weather
 	}
 
@@ -151,7 +132,7 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 		case <-saveStreakCooldownTicker.C:
 			myPet.CooldownFlowState()
 		case <-weatherTicker.C:
-			if weather, err := brain.GetWeatherData(); err == nil {
+			if weather, err := api.GetWeatherData(); err == nil {
 				myPet.WeatherKnowledge = weather
 			}
 		}

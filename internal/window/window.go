@@ -56,6 +56,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"gopher-gotchi/internal/api"
 	"gopher-gotchi/internal/brain"
 	"os"
 	"path/filepath"
@@ -92,7 +93,7 @@ type PetState struct {
 	Message          string                     `json:"message"`
 	CPULoad          int                        `json:"cpuLoad"`
 	FlowActive       bool                       `json:"flowActive"`
-	WeatherKnowledge brain.ProcessedWeatherData `json:"weatherKnowledge"`
+	WeatherKnowledge api.ProcessedWeatherData `json:"weatherKnowledge"`
 }
 
 // Window wraps a webview window that displays the floating pet UI.
