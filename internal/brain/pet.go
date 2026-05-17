@@ -20,33 +20,30 @@ type Memory struct {
 
 type Pet struct {
 	mu               sync.Mutex
-	Name             string               `json:"name"`
-	Species          string               `json:"species"`
-	Level            int                  `json:"level"`
-	Experience       int                  `json:"experience"`
-	Hunger           int                  `json:"hunger"` // 0 is full, 100 is starving
-	Mood             string               `json:"mood"`
-	LastEaten        time.Time            `json:"last_eaten"`
-	IdleNudged       bool                 `json:"-"`
-	Message          string               `json:"-"`
-	CPULoad          int                  `json:"-"`
-	BatteryLevel     int                  `json:"-"`
-	IsCharging       bool                 `json:"-"`
-	Memories         []Memory             `json:"-"`
-	Tasks            chan Task            `json:"-"`
-	RecentSaves      []time.Time          `json:"-"`
-	FlowActive       bool                 `json:"-"`
+	Name             string                   `json:"name"`
+	Species          string                   `json:"species"`
+	Level            int                      `json:"level"`
+	Experience       int                      `json:"experience"`
+	Hunger           int                      `json:"hunger"` // 0 is full, 100 is starving
+	Mood             string                   `json:"mood"`
+	LastEaten        time.Time                `json:"last_eaten"`
+	Bond             int                      `json:"bond"` // 0 is not bonded, 100 is fully bonded
+	IdleNudged       bool                     `json:"-"`
+	Message          string                   `json:"-"`
+	CPULoad          int                      `json:"-"`
+	BatteryLevel     int                      `json:"-"`
+	IsCharging       bool                     `json:"-"`
+	Memories         []Memory                 `json:"-"`
+	Tasks            chan Task                `json:"-"`
+	RecentSaves      []time.Time              `json:"-"`
+	FlowActive       bool                     `json:"-"`
 	WeatherKnowledge api.ProcessedWeatherData `json:"-"`
 }
 
 func NewPet(name string, species string) *Pet {
-	if _, ok := ui.Themes[species]; !ok {
-		species = "diana"
-	}
-
 	return &Pet{
 		Name:      name,
-		Species:   species,
+		Species:   "diana",
 		Level:     1,
 		Hunger:    0,
 		Mood:      Happy,
@@ -64,13 +61,17 @@ func (p *Pet) HandleCommand(cmd string) {
 	case "ping":
 		p.Message = "PONG"
 	case "hug":
+		p.increaseBond(5)
 		p.Mood = Happy
 		p.Message = "💖 ˶^ ᴗ ^˶ I feel the warmth. Thank you, Huy."
 	case "joke":
 		joke := FetchArchiveData()
 		p.Message = fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke)
 	case "gift":
-		p.Message = p.giftMessage()
+		gift := ui.DigitalTreasury[rand.IntN(len(ui.DigitalTreasury))]
+		fmt.Println(ui.BondPointsBasedOnRarity[gift.Rarity])
+		p.increaseBond(ui.BondPointsBasedOnRarity[gift.Rarity])
+		p.Message = fmt.Sprintf(`<div class="gift-reveal"><div class="gift-tagline">✨ Thank you for the gift, Huy!</div>%s<div class="gift-name">%s</div><div class="gift-rarity">%s Artifact</div></div>`, gift.Art, gift.Name, gift.Rarity)
 		p.Mood = Happy
 	case "objectives", "mission":
 		objectives, err := api.FetchObjectives()
@@ -81,10 +82,6 @@ func (p *Pet) HandleCommand(cmd string) {
 	default:
 		p.Message = "Unknown command"
 	}
-}
-
-func (p *Pet) GetBlinkFace() string {
-	return ui.Themes[p.Species].Blink
 }
 
 func (p *Pet) Eat(exp int) {
@@ -110,26 +107,27 @@ func (p *Pet) Eat(exp int) {
 	p.registerActivity()
 }
 
-func (p *Pet) CheckIdle() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if time.Since(p.LastEaten) > 10*time.Minute && !p.IdleNudged {
-		p.Mood = Lonely
-		p.IdleNudged = true
-		p.Message = "Huy? The data stream is thinning. Are you still there?"
-	}
-}
-
 // LifeCycle simulates the passage of time (the pet gets hungrier as you don't code)
 func (p *Pet) LifeCycle() {
 	ticker := time.NewTicker(15 * time.Minute)
 	for range ticker.C {
 		p.mu.Lock()
 		p.Hunger += 5
+		p.Bond -= 15
+
+		if p.Bond < 0 {
+			p.Bond = 0
+		}
+
 		if p.Hunger > 100 {
 			p.Hunger = 100
 		}
+
+		if p.Bond > 100 {
+			p.Bond = 100
+		}
+
+		p.checkIdle()
 
 		switch {
 		case p.Hunger > 70:
@@ -140,13 +138,7 @@ func (p *Pet) LifeCycle() {
 			p.Mood = Happy
 		}
 
-		lastEaten := p.LastEaten
-		idleNudged := p.IdleNudged
 		p.mu.Unlock()
-
-		if time.Since(lastEaten) > 10*time.Minute && !idleNudged {
-			p.CheckIdle()
-		}
 	}
 }
 
@@ -226,18 +218,10 @@ func (p *Pet) RunInteractionLoop() {
 	for {
 		<-time.After(nextInteractionDelay())
 
-		switch rand.IntN(2) {
-		case 0:
-			p.mu.Lock()
-			p.Message = p.giftMessage()
-			p.Mood = Happy
-			p.mu.Unlock()
-		case 1:
-			p.mu.Lock()
-			joke := FetchArchiveData()
-			p.Message = fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke)
-			p.mu.Unlock()
-		}
+		p.mu.Lock()
+		joke := FetchArchiveData()
+		p.Message = fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke)
+		p.mu.Unlock()
 	}
 }
 
@@ -256,9 +240,11 @@ func nextInteractionDelay() time.Duration {
 
 func (p *Pet) checkLevelUp() {
 	target := p.Level * 100
+
 	if p.Experience >= target {
 		p.Level++
 		p.Experience = 0
+		p.increaseBond(40)
 
 		memory := &Memory{
 			Timestamp: time.Now().Format("2006-01-02 15:04"),
@@ -267,13 +253,8 @@ func (p *Pet) checkLevelUp() {
 		}
 		p.Message = fmt.Sprintf("✨ LEVEL UP!\n YAY! I'm now Level %d!\n", p.Level)
 
-		go p.EnqueueSync(memory)
+		p.EnqueueSync(memory)
 	}
-}
-
-func (p *Pet) giftMessage() string {
-	gift := ui.DigitalTreasury[rand.IntN(len(ui.DigitalTreasury))]
-	return fmt.Sprintf(`<div class="gift-reveal"><div class="gift-tagline">✨ From the digital void</div>%s<div class="gift-name">%s</div><div class="gift-rarity">%s Artifact</div></div>`, gift.Art, gift.Name, gift.Rarity)
 }
 
 func (p *Pet) registerActivity() {
@@ -290,6 +271,22 @@ func (p *Pet) registerActivity() {
 	if len(p.RecentSaves) >= 3 && !p.FlowActive {
 		p.FlowActive = true
 		p.Mood = Elated
+		p.increaseBond(2)
 		p.Message = "🔥 Wow! You're crushing it Huy."
+	}
+}
+
+func (p *Pet) checkIdle() {
+	if time.Since(p.LastEaten) > 10*time.Minute && !p.IdleNudged {
+		p.Mood = Lonely
+		p.IdleNudged = true
+		p.Message = "Huy? The data stream is thinning. Are you still there?"
+	}
+}
+
+func (p *Pet) increaseBond(amount int) {
+	p.Bond += amount
+	if p.Bond > 100 {
+		p.Bond = 100
 	}
 }

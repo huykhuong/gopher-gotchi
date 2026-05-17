@@ -87,13 +87,14 @@ const (
 
 // PetState is the data sent to the webview UI on each tick.
 type PetState struct {
-	Level            int                        `json:"level"`
-	Hunger           int                        `json:"hunger"`
-	Mood             brain.Mood                 `json:"mood"`
-	Message          string                     `json:"message"`
-	CPULoad          int                        `json:"cpuLoad"`
-	FlowActive       bool                       `json:"flowActive"`
+	Level            int                      `json:"level"`
+	Hunger           int                      `json:"hunger"`
+	Mood             brain.Mood               `json:"mood"`
+	Message          string                   `json:"message"`
+	CPULoad          int                      `json:"cpuLoad"`
+	FlowActive       bool                     `json:"flowActive"`
 	WeatherKnowledge api.ProcessedWeatherData `json:"weatherKnowledge"`
+	Bond             int                      `json:"bond"`
 }
 
 // Window wraps a webview window that displays the floating pet UI.

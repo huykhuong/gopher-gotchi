@@ -40,9 +40,9 @@ var moods = map[string]Mood{
 	},
 	"elated": {
 		Name:     "Elated 😍",
-		Row:      4,
-		Frames:   5,
-		Duration: 840,
+		Row:      7,
+		Frames:   6,
+		Duration: 820,
 	},
 	"idle": {
 		Name:     "Idle 😴",

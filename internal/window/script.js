@@ -46,9 +46,32 @@ function updateState(s) {
   document.getElementById('level').textContent = 'LVL ' + (s.level || 1);
   document.getElementById('mood').textContent  = s.mood.Name || '';
 
-  // Flow aura — glows when on a save streak
-  document.getElementById('aura').classList.toggle('active', !!s.flowActive);
-  document.getElementById('sprite').classList.toggle('flow', !!s.flowActive);
+  var bondTier = s.bond !== undefined ? Math.min(5, Math.floor(s.bond / 20)) : 0;
+
+  // Bond tier class on sprite (semantic, for future CSS hooks)
+  for (var ti = 0; ti <= 5; ti++) spriteEl.classList.remove('bond-tier-' + ti);
+  spriteEl.classList.add('bond-tier-' + bondTier);
+
+  // Bond color filters — cool blues → warm purples → rosy pinks → golden
+  var tierFilters = [
+    'saturate(0.92)',
+    'saturate(1.06) hue-rotate(-8deg)',
+    'saturate(1.16) hue-rotate(-18deg)',
+    'saturate(1.28) hue-rotate(-30deg)',
+    'saturate(1.42) hue-rotate(-45deg) brightness(1.05)',
+    'saturate(1.60) hue-rotate(-60deg) brightness(1.10)',
+  ];
+  var flowGlow = s.flowActive
+    ? 'drop-shadow(0 0 6px rgba(255,200,100,0.85)) drop-shadow(0 0 14px rgba(255,140,60,0.55))'
+    : '';
+  spriteEl.style.filter = [tierFilters[bondTier], flowGlow].filter(Boolean).join(' ');
+
+  // Aura — flow state or high bond tier
+  var auraEl = document.getElementById('aura');
+  for (var ai = 0; ai <= 5; ai++) auraEl.classList.remove('bond-aura-' + ai);
+  auraEl.classList.add('bond-aura-' + bondTier);
+  auraEl.classList.toggle('active', !!s.flowActive || bondTier >= 4);
+
   const hunger = s.hunger || 0;
 
   setAnimation(s.mood);
@@ -315,6 +338,89 @@ function drawTimeAmbient(tod) {
   }
 }
 
+var _starTwinkle = Array.from({ length: 5 }, function() {
+  return { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.04 + 0.02 };
+});
+var _starPositions = [
+  { x: 148, y: 14 }, { x: 138, y: 44 }, { x: 158, y: 55 },
+  { x: 182, y: 54 }, { x: 192, y: 15 }
+];
+
+function drawDayNightIndicator() {
+  var h = new Date().getHours();
+  var isDay = h >= 5 && h < 17;
+
+  if (isDay) {
+    var sx = 170, sy = 30;
+    wctx.save();
+    // Outer soft bloom
+    var g1 = wctx.createRadialGradient(sx, sy, 0, sx, sy, 38);
+    g1.addColorStop(0,   'rgba(255, 210, 70, 0.22)');
+    g1.addColorStop(0.5, 'rgba(255, 170, 40, 0.08)');
+    g1.addColorStop(1,   'rgba(255, 130, 20, 0)');
+    wctx.fillStyle = g1;
+    wctx.beginPath(); wctx.arc(sx, sy, 38, 0, Math.PI * 2); wctx.fill();
+    // Mid glow
+    var g2 = wctx.createRadialGradient(sx, sy, 0, sx, sy, 22);
+    g2.addColorStop(0,   'rgba(255, 230, 110, 0.45)');
+    g2.addColorStop(0.7, 'rgba(255, 190, 60, 0.18)');
+    g2.addColorStop(1,   'rgba(255, 160, 40, 0)');
+    wctx.fillStyle = g2;
+    wctx.beginPath(); wctx.arc(sx, sy, 22, 0, Math.PI * 2); wctx.fill();
+    // Sun core
+    var gc = wctx.createRadialGradient(sx - 2, sy - 2, 0, sx, sy, 10);
+    gc.addColorStop(0,   'rgba(255, 252, 200, 1.0)');
+    gc.addColorStop(0.5, 'rgba(255, 230, 100, 0.95)');
+    gc.addColorStop(1,   'rgba(255, 200, 60, 0.80)');
+    wctx.fillStyle = gc;
+    wctx.beginPath(); wctx.arc(sx, sy, 10, 0, Math.PI * 2); wctx.fill();
+    wctx.restore();
+
+  } else {
+    var mx = 170, my = 30;
+    wctx.save();
+    // Outer halo
+    var mg1 = wctx.createRadialGradient(mx, my, 0, mx, my, 34);
+    mg1.addColorStop(0,   'rgba(200, 225, 255, 0.18)');
+    mg1.addColorStop(0.5, 'rgba(180, 215, 255, 0.07)');
+    mg1.addColorStop(1,   'rgba(160, 205, 255, 0)');
+    wctx.fillStyle = mg1;
+    wctx.beginPath(); wctx.arc(mx, my, 34, 0, Math.PI * 2); wctx.fill();
+    // Mid glow
+    var mg2 = wctx.createRadialGradient(mx, my, 0, mx, my, 18);
+    mg2.addColorStop(0,   'rgba(220, 238, 255, 0.32)');
+    mg2.addColorStop(0.7, 'rgba(200, 228, 255, 0.12)');
+    mg2.addColorStop(1,   'rgba(180, 218, 255, 0)');
+    wctx.fillStyle = mg2;
+    wctx.beginPath(); wctx.arc(mx, my, 18, 0, Math.PI * 2); wctx.fill();
+    // Crescent — two arcs with nonzero winding (no destination-out, no black bg)
+    var mgc = wctx.createRadialGradient(mx - 2, my - 2, 0, mx, my, 11);
+    mgc.addColorStop(0,   'rgba(248, 252, 255, 0.95)');
+    mgc.addColorStop(0.6, 'rgba(220, 238, 255, 0.85)');
+    mgc.addColorStop(1,   'rgba(190, 222, 255, 0.70)');
+    wctx.fillStyle = mgc;
+    wctx.beginPath();
+    wctx.arc(mx, my, 11, 0, Math.PI * 2, false);   // outer disc clockwise
+    wctx.arc(mx + 6, my - 2, 8.5, 0, Math.PI * 2, true);  // inner disc counter-clockwise → crescent
+    wctx.fill();
+    wctx.restore();
+
+    // Twinkling stars nearby
+    for (var i = 0; i < _starTwinkle.length; i++) {
+      _starTwinkle[i].phase += _starTwinkle[i].speed;
+      var a = (Math.sin(_starTwinkle[i].phase) * 0.5 + 0.5) * 0.65 + 0.10;
+      var sp = _starPositions[i];
+      wctx.save();
+      wctx.globalAlpha = a;
+      wctx.fillStyle = 'rgba(220, 238, 255, 1)';
+      // Cross/sparkle shape
+      wctx.fillRect(sp.x - 0.5, sp.y - 2.5, 1, 5);
+      wctx.fillRect(sp.x - 2.5, sp.y - 0.5, 5, 1);
+      wctx.restore();
+    }
+  }
+}
+
 function drawWeatherFrame() {
   wctx.clearRect(0, 0, 200, 340);
   wframe++;
@@ -465,6 +571,8 @@ function drawWeatherFrame() {
       drawCloud(fc.x, fc.y, fc.scale * 1.6, fc.alpha * 0.6);
     }
   }
+
+  drawDayNightIndicator();
 
   requestAnimationFrame(drawWeatherFrame);
 }

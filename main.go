@@ -127,6 +127,7 @@ func runLoop(myPet *brain.Pet, win *window.Window) {
 				CPULoad:          snap.CPULoad,
 				FlowActive:       snap.FlowActive,
 				WeatherKnowledge: myPet.WeatherKnowledge,
+				Bond:             myPet.Bond,
 			})
 
 		case <-saveStreakCooldownTicker.C:

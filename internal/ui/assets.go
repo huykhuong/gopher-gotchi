@@ -6,6 +6,14 @@ type Gift struct {
 	Art    string
 }
 
+var BondPointsBasedOnRarity = map[string]int{
+	"Common":    1,
+	"Uncommon":  2,
+	"Rare":      3,
+	"Epic":      4,
+	"Legendary": 5,
+}
+
 var DigitalTreasury = []Gift{
 	{
 		Name:   "Holographic Rose",
