@@ -2,21 +2,19 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"gopher-gotchi/internal/api"
 	"gopher-gotchi/internal/brain"
 	"gopher-gotchi/internal/watcher"
 	"gopher-gotchi/internal/window"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 )
 
 func main() {
-	var wg sync.WaitGroup
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 
@@ -38,18 +36,14 @@ func main() {
 
 		close(eventsChan)
 
-		wg.Add(1)
 		myPet.Tasks <- func() error {
-			defer wg.Done()
-			return myPet.SyncAllToCloud(nil)
+			err := myPet.SyncAllToCloud(nil)
+			return err
 		}
-		wg.Wait()
+
 		close(myPet.Tasks)
 
-		fmt.Println("💾 Finalizing cloud sync... Goodbye, Huy.")
-		time.Sleep(2 * time.Second)
-
-		os.Exit(0)
+		log.Println("💾 Cloud sync complete. Goodbye, Huy.")
 	}
 
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)

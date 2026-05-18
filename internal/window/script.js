@@ -4,12 +4,8 @@ const FRAME_H = 130;
 
 const spriteEl  = document.getElementById('sprite');
 const styleEl   = document.getElementById('sprite-style');
-let currentAnim = null;
 
 function setAnimation(mood) {
-  if (currentAnim === mood) return;
-  currentAnim = mood;
-  console.log(mood);
   styleEl.textContent = `@keyframes sp { from { background-position-x: 0px } to { background-position-x: ${-(mood.Frames * FRAME_W)}px } }`;
   spriteEl.style.backgroundPositionY = -(mood.Row * FRAME_H) + 'px';
   spriteEl.style.animation = `sp ${mood.Duration}ms steps(${mood.Frames}) infinite`;
@@ -45,6 +41,9 @@ let bubbleTimer = null;
 function updateState(s) {
   document.getElementById('level').textContent = 'LVL ' + (s.level || 1);
   document.getElementById('mood').textContent  = s.mood.Name || '';
+
+  // Track mood for voice profile (e.g. "Happy 😊" → "happy")
+  currentMoodForVoice = ((s.mood && s.mood.Name) || 'Happy').split(' ')[0].toLowerCase();
 
   var bondTier = s.bond !== undefined ? Math.min(5, Math.floor(s.bond / 20)) : 0;
 
@@ -146,7 +145,10 @@ function showBubble(text) {
   } else {
     el.innerText = text;
   }
+
   el.classList.add('show');
+  speakMessage(text);
+
   if (bubbleTimer) clearTimeout(bubbleTimer);
   bubbleTimer = setTimeout(function() { el.classList.remove('show'); }, 5000);
 }
@@ -171,7 +173,6 @@ document.addEventListener('mouseup', function() { dragging = false; });
 
 // ===============================
 // WEATHER CANVAS
-// ===============================
 const weatherCanvas = document.getElementById('weather-canvas');
 const wctx = weatherCanvas.getContext('2d');
 weatherCanvas.width  = 200;
@@ -578,13 +579,89 @@ function drawWeatherFrame() {
 }
 
 drawWeatherFrame();
+// ===============================
 
-// {
-//   "name": "Diana",
-//   "species": "diana",
-//   "level": 31,
-//   "experience": 503,
-//   "hunger": 0,
-//   "mood": "happy",
-//   "last_eaten": "2026-05-14T20:38:02.630367+07:00"
-// }
+// ===============================
+// SPEAK
+let voiceEnabled = false;
+try { voiceEnabled = localStorage.getItem('dianaVoice') === 'on'; } catch (e) {}
+let currentMoodForVoice = 'happy';
+let _dianaVoice = null;
+
+// Diana's voice — macOS voices: Samantha, Victoria, Karen, Moira, Tessa
+// Edge users: change to "Microsoft Ana Online (Natural)"
+const DIANA_VOICE_NAME = "Superstar";
+
+// Mood-driven speech profiles
+const MOOD_VOICE = {
+  happy:    { pitch: 1.25, rate: 1.00 },
+  elated:   { pitch: 1.35, rate: 1.08 },
+  starving: { pitch: 1.05, rate: 0.92 },
+  hungry:   { pitch: 1.05, rate: 0.92 },
+  lonely:   { pitch: 1.00, rate: 0.88 },
+  idle:     { pitch: 1.10, rate: 0.95 },
+};
+
+function cleanTextForSpeech(text) {
+  // If it's HTML (gift message), extract just the readable text
+  let clean = text;
+  if (clean.trimStart().startsWith('<')) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = clean;
+    clean = tmp.textContent || '';
+  }
+  // Strip emojis and pictographic symbols so Diana doesn't say "sparkles"
+  clean = clean
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[\u{1F000}-\u{1F2FF}]/gu, '')
+    .replace(/[\u{2300}-\u{23FF}]/gu, '')
+    .replace(/[\u{FE0F}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clean;
+}
+
+function speakMessage(text) {
+  if (!voiceEnabled) return;
+
+  const clean = cleanTextForSpeech(text);
+  if (!clean) return;
+
+  // Mood profile + tiny randomness so she doesn't sound robotic
+  const profile = MOOD_VOICE[currentMoodForVoice] || MOOD_VOICE.happy;
+  const pitch = profile.pitch + (Math.random() - 0.5) * 0.10;
+  const rate  = profile.rate  + (Math.random() - 0.5) * 0.06;
+
+  window.speechSynthesis.cancel(); // stop overlapping speech
+
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.pitch = pitch
+  utterance.rate  = rate;
+  if (_dianaVoice) utterance.voice = _dianaVoice;
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function updateVoiceButton() {
+  const btn = document.getElementById('voice-toggle');
+  if (!btn) return;
+  btn.textContent = voiceEnabled ? '🔊' : '🔇';
+  btn.classList.toggle('active', voiceEnabled);
+  btn.title = voiceEnabled ? "Diana's voice is on (click to mute)" : "Diana's voice is off (click to enable)";
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  try { localStorage.setItem('dianaVoice', voiceEnabled ? 'on' : 'off'); } catch (e) {}
+  updateVoiceButton();
+  if (!voiceEnabled) window.speechSynthesis.cancel();
+}
+
+// Wire up the toggle button + initial voice selection
+document.getElementById('voice-toggle').addEventListener('click', function(e) {
+  e.stopPropagation();
+  toggleVoice();
+});
+updateVoiceButton();
+// ===============================

@@ -155,7 +155,7 @@ func New(onQuit func(), onAction func(string), dev bool) *Window {
 			w.wv.Terminate()
 		})
 		if w.onQuit != nil {
-			go w.onQuit()
+			w.onQuit()
 		}
 	})
 
