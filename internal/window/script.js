@@ -606,19 +606,16 @@ function cleanTextForSpeech(text) {
   // If it's HTML (gift message), extract just the readable text
   let clean = text;
   if (clean.trimStart().startsWith('<')) {
+    clean = clean.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, "");
     const tmp = document.createElement('div');
     tmp.innerHTML = clean;
     clean = tmp.textContent || '';
   }
   // Strip emojis and pictographic symbols so Diana doesn't say "sparkles"
   clean = clean
-    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')
-    .replace(/[\u{1F000}-\u{1F2FF}]/gu, '')
-    .replace(/[\u{2300}-\u{23FF}]/gu, '')
-    .replace(/[\u{FE0F}]/gu, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\p{Extended_Pictographic}/gu, "")
     .trim();
+
   return clean;
 }
 

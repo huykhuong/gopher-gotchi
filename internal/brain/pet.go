@@ -69,7 +69,6 @@ func (p *Pet) HandleCommand(cmd string) {
 		p.Message = fmt.Sprintf("Here's a joke for you, Huy:\n\n%s", joke)
 	case "gift":
 		gift := ui.DigitalTreasury[rand.IntN(len(ui.DigitalTreasury))]
-		fmt.Println(ui.BondPointsBasedOnRarity[gift.Rarity])
 		p.increaseBond(ui.BondPointsBasedOnRarity[gift.Rarity])
 		p.Message = fmt.Sprintf(`<div class="gift-reveal"><div class="gift-tagline">✨ Thank you for the gift, Huy!</div>%s<div class="gift-name">%s</div><div class="gift-rarity">%s Artifact</div></div>`, gift.Art, gift.Name, gift.Rarity)
 		p.Mood = Happy
