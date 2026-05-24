@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -29,28 +30,38 @@ func main() {
 	// Create the window first — before the file watcher opens thousands of
 	// file descriptors, which would exhaust macOS's limit and crash Metal init.
 	var win *window.Window
+
+	workerDone := brain.StartWorkerPool(myPet.Tasks)
+
+	var cleanupOnce sync.Once
+	cleanupDone := make(chan struct{})
+
 	cleanup := func() {
-		if win != nil {
-			win.Terminate()
-		}
+		cleanupOnce.Do(func() {
+			defer close(cleanupDone)
 
-		close(eventsChan)
+			// Stop new events first, then drain in-flight sync tasks.
+			close(eventsChan)
+			close(myPet.Tasks)
+			<-workerDone
 
-		myPet.Tasks <- func() error {
-			err := myPet.SyncAllToCloud(nil)
-			return err
-		}
+			// After all tasks are drained, do the final sync.
+			if err := myPet.SyncAllToCloud(nil); err != nil {
+				log.Println("⚠️ Final sync error:", err)
+			} else {
+				log.Println("💾 Cloud sync complete. Goodbye, Huy.")
+			}
 
-		close(myPet.Tasks)
-
-		log.Println("💾 Cloud sync complete. Goodbye, Huy.")
+			if win != nil {
+				win.Terminate()
+			}
+		})
 	}
 
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
 
 	startWatcher(eventsChan)
 	api.StartServer(window.Spritesheet)
-	brain.StartWorkerPool(myPet.Tasks)
 
 	go runEventLoop(eventsChan, myPet)
 	go runLoop(myPet, win)
@@ -60,8 +71,10 @@ func main() {
 		cleanup()
 	}()
 
-	// Run blocks the main thread until the window is closed.
+	// Run blocks the main thread until win.Terminate() is called (by cleanup).
 	win.Run()
+
+	<-cleanupDone
 }
 
 func loadOrCreatePet(species string) *brain.Pet {

@@ -208,6 +208,9 @@ func (p *Pet) CreateMemory(event string) *Memory {
 }
 
 func (p *Pet) EnqueueSync(memory *Memory) {
+	// During shutdown the Tasks channel is closed; a late enqueue from a
+	// goroutine (e.g. checkLevelUp) would otherwise panic.
+	defer func() { _ = recover() }()
 	p.Tasks <- func() error {
 		return p.SyncAllToCloud(memory)
 	}

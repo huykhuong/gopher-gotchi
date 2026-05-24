@@ -149,11 +149,11 @@ func New(onQuit func(), onAction func(string), dev bool) *Window {
 		})
 	})
 
-	// JS binding: quitApp() – called by the Quit button in index.html
+	// JS binding: quitApp() – called by the Quit button in index.html.
+	// onQuit is responsible for terminating the window once it has finished
+	// flushing state (e.g. final cloud sync); doing it here would unblock the
+	// main thread before cleanup completes.
 	w.wv.Bind("quitApp", func() {
-		w.wv.Dispatch(func() {
-			w.wv.Terminate()
-		})
 		if w.onQuit != nil {
 			w.onQuit()
 		}
