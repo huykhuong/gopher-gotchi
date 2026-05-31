@@ -6,6 +6,7 @@ const (
 	FileSaved EventType = iota
 	CommandReceived
 	SystemAlert
+	ClipboardErrorDetected
 )
 
 type DataEvent struct {

@@ -40,7 +40,7 @@ type Pet struct {
 	WeatherKnowledge api.ProcessedWeatherData `json:"-"`
 }
 
-func NewPet(name string, species string) *Pet {
+func NewPet(name string) *Pet {
 	return &Pet{
 		Name:      name,
 		Species:   "diana",

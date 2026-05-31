@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"gopher-gotchi/internal/api"
 	"gopher-gotchi/internal/brain"
 	"gopher-gotchi/internal/watcher"
@@ -18,12 +20,13 @@ import (
 func main() {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	speciesFlag := flag.String("species", "diana", "The species of the companion")
 	devFlag := flag.Bool("dev", false, "Load UI from filesystem for live editing")
 	flag.Parse()
 
-	myPet := loadOrCreatePet(*speciesFlag)
+	myPet := loadOrCreatePet()
 
 	eventsChan := make(chan brain.DataEvent, 10)
 
@@ -32,6 +35,12 @@ func main() {
 	var win *window.Window
 
 	workerDone := brain.StartWorkerPool(myPet.Tasks)
+	startWatcher(eventsChan)
+	brain.StartClipboardWatcher(ctx, eventsChan)
+	api.StartServer(window.Spritesheet)
+
+	go runEventLoop(eventsChan, myPet)
+	go runLoop(myPet, win)
 
 	var cleanupOnce sync.Once
 	cleanupDone := make(chan struct{})
@@ -60,12 +69,6 @@ func main() {
 
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
 
-	startWatcher(eventsChan)
-	api.StartServer(window.Spritesheet)
-
-	go runEventLoop(eventsChan, myPet)
-	go runLoop(myPet, win)
-
 	go func() {
 		<-stopSignal
 		cleanup()
@@ -77,10 +80,10 @@ func main() {
 	<-cleanupDone
 }
 
-func loadOrCreatePet(species string) *brain.Pet {
+func loadOrCreatePet() *brain.Pet {
 	myPet, err := brain.LoadPet()
 	if err != nil {
-		myPet = brain.NewPet("Diana", species)
+		myPet = brain.NewPet("Diana")
 	}
 	return myPet
 }
@@ -101,6 +104,9 @@ func runEventLoop(eventsChan chan brain.DataEvent, myPet *brain.Pet) {
 			watcher.UpdateXP(path, myPet)
 
 			myPet.EnqueueSync(nil)
+		case brain.ClipboardErrorDetected:
+			myPet.Message = fmt.Sprintf("Don't sweat the %s, Huy. Take a deep breath, we can trace this block together!", event.Payload.(string))
+			myPet.Mood = brain.Concerned
 		}
 	}
 }

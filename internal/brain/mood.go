@@ -5,11 +5,12 @@ import (
 )
 
 const (
-	Happy  = "happy"
-	Hungry = "hungry"
-	Lonely = "lonely"
-	Elated = "elated"
-	Idle   = "idle"
+	Happy     = "happy"
+	Hungry    = "hungry"
+	Lonely    = "lonely"
+	Elated    = "elated"
+	Idle      = "idle"
+	Concerned = "concerned"
 )
 
 type Mood struct {
@@ -49,6 +50,12 @@ var moods = map[string]Mood{
 		Row:      0,
 		Frames:   6,
 		Duration: 1100,
+	},
+	"concerned": {
+		Name:     "Concerned 😰",
+		Row:      8,
+		Frames:   6,
+		Duration: 1030,
 	},
 }
 
