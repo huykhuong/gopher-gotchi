@@ -58,14 +58,16 @@ import (
 	"fmt"
 	"gopher-gotchi/internal/api"
 	"gopher-gotchi/internal/brain"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"unsafe"
 
 	webview "github.com/webview/webview_go"
 )
+
+const uiOrigin = "http://localhost:9090"
 
 //go:embed index.html
 var indexHTML string
@@ -75,9 +77,6 @@ var stylesCSS string
 
 //go:embed script.js
 var scriptJS string
-
-//go:embed spritesheet.webp
-var Spritesheet []byte
 
 const (
 	windowWidth  = 200
@@ -103,6 +102,44 @@ type Window struct {
 	onQuit func()
 }
 
+// registerUIRoutes wires the UI assets onto http.DefaultServeMux so the
+// webview can load them over a real http://localhost:9090 origin. In dev mode
+// assets are served live from disk so edits to HTML/CSS/JS show up on reload;
+// in production the embedded strings are served instead.
+func registerUIRoutes(dev bool) {
+	if dev {
+		cwd, _ := os.Getwd()
+		dir := filepath.Join(cwd, "internal", "window")
+		http.Handle("/", noCache(http.FileServer(http.Dir(dir))))
+		return
+	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			serveAsset(w, indexHTML, "text/html")
+		case "/styles.css":
+			serveAsset(w, stylesCSS, "text/css")
+		case "/script.js":
+			serveAsset(w, scriptJS, "application/javascript")
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+func serveAsset(w http.ResponseWriter, body, contentType string) {
+	w.Header().Set("Content-Type", contentType+"; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	fmt.Fprint(w, body)
+}
+
+func noCache(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		h.ServeHTTP(w, r)
+	})
+}
+
 // New creates a new floating pet window. onQuit is called when the user
 // clicks the Quit button inside the webview.
 //
@@ -119,15 +156,8 @@ func New(onQuit func(), onAction func(string), dev bool) *Window {
 	w.wv.SetTitle("Diana")
 	w.wv.SetSize(windowWidth, windowHeight, webview.HintFixed)
 
-	if dev {
-		cwd, _ := os.Getwd()
-		htmlPath := filepath.Join(cwd, "internal", "window", "index.html")
-		w.wv.Navigate("file://" + htmlPath)
-	} else {
-		html := strings.ReplaceAll(indexHTML, `<link rel="stylesheet" href="styles.css">`, "<style>"+stylesCSS+"</style>")
-		html = strings.ReplaceAll(html, `<script src="script.js"></script>`, "<script>"+scriptJS+"</script>")
-		w.wv.SetHtml(html)
-	}
+	registerUIRoutes(dev)
+	w.wv.Navigate(uiOrigin + "/")
 
 	// Position and style the native NSWindow after the webview is created.
 	w.wv.Dispatch(func() {

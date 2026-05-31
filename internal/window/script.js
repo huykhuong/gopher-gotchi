@@ -583,8 +583,7 @@ drawWeatherFrame();
 
 // ===============================
 // SPEAK
-let voiceEnabled = false;
-try { voiceEnabled = localStorage.getItem('dianaVoice') === 'on'; } catch (e) {}
+let voiceEnabled = localStorage.getItem('dianaVoice') === 'on';
 let currentMoodForVoice = 'happy';
 let _dianaVoice = null;
 
@@ -650,7 +649,7 @@ function updateVoiceButton() {
 
 function toggleVoice() {
   voiceEnabled = !voiceEnabled;
-  try { localStorage.setItem('dianaVoice', voiceEnabled ? 'on' : 'off'); } catch (e) {}
+  localStorage.setItem('dianaVoice', voiceEnabled ? 'on' : 'off');
   updateVoiceButton();
   if (!voiceEnabled) window.speechSynthesis.cancel();
 }

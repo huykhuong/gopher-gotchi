@@ -61,11 +61,14 @@ func main() {
 		})
 	}
 
+	// Start the local HTTP server before the window — the webview will navigate
+	// to http://localhost:9090 to load its UI, so the listener must be up first.
+	api.StartServer()
+
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
 
 	startWatcher(eventsChan)
 	brain.StartClipboardWatcher(ctx, eventsChan)
-	api.StartServer(window.Spritesheet)
 
 	go runEventLoop(eventsChan, myPet)
 	go runLoop(myPet, win)

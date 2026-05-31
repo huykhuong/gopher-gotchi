@@ -105,7 +105,7 @@ html, body {
 .sprite {
   width: 120px;
   height: 130px;
-  background-image: url('http://localhost:9090/spritesheet');
+  background-image: url('/spritesheet');
   background-size: 960px 1170px; /* 120*8 x 130*9 */
   background-repeat: no-repeat;
   image-rendering: pixelated;
