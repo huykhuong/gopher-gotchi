@@ -35,12 +35,6 @@ func main() {
 	var win *window.Window
 
 	workerDone := brain.StartWorkerPool(myPet.Tasks)
-	startWatcher(eventsChan)
-	brain.StartClipboardWatcher(ctx, eventsChan)
-	api.StartServer(window.Spritesheet)
-
-	go runEventLoop(eventsChan, myPet)
-	go runLoop(myPet, win)
 
 	var cleanupOnce sync.Once
 	cleanupDone := make(chan struct{})
@@ -68,6 +62,13 @@ func main() {
 	}
 
 	win = window.New(cleanup, myPet.HandleCommand, *devFlag)
+
+	startWatcher(eventsChan)
+	brain.StartClipboardWatcher(ctx, eventsChan)
+	api.StartServer(window.Spritesheet)
+
+	go runEventLoop(eventsChan, myPet)
+	go runLoop(myPet, win)
 
 	go func() {
 		<-stopSignal
